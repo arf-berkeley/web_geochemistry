@@ -3,7 +3,7 @@ library(plotly)
 library(ggplot2)
 library(readxl)
 library(dplyr)
-#library(ggiraph)
+library(ggiraph)
 library(shinyBS)
 
 source("function_library.R")
@@ -101,7 +101,7 @@ server = function(input, output) {
             legend.position = "bottom",
             legend.title = element_blank(),
             panel.border = element_rect(fill = NA, colour = "#e3e3e3")#,
-     #       legend.position = "none"
+      #       legend.position = "none"
       )
 
 
@@ -160,12 +160,14 @@ server = function(input, output) {
 
     margin = list(l = 0, r = 300, b = 0, t = 50, pad = 0)
     #margin = list()
-    p = plotly::ggplotly(p) %>% plotly::layout(orientation = "h")  %>%
+    p = plotly::ggplotly(p) %>%
+      plotly::layout(legend = list(orientation = "h"))  %>%
       config(displayModeBar = F)
     p
 
   })#, height=700)
 
+  # This code is not being used anymore.
   output$hover_info <- renderUI({
     hover <- input$plot_hover
     point <- nearPoints(source_data(), hover, xvar = "x", yvar = "y", threshold = 5,
