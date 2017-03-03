@@ -24,12 +24,12 @@ server = function(input, output) {
       source_group = input$source_group
       #cat("Source group is now:", paste(source_group), "\n")
     } else {
-      # Restrict to the top 5 sources.
+      # Restrict to the top 4 sources.
       source_counts = table(data$Source_Name)
       df = data.frame(source=names(source_counts), count=as.numeric(source_counts))
       df = df[order(df$count, decreasing=T), ]
-      # Up to 5 - if df has fewer than 5 rows then just show everything (e.g. small region).
-      source_group = df[1:min(5, nrow(df)), "source"]
+      # Up to 4 - if df has fewer than 4 rows then just show everything (e.g. small region).
+      source_group = df[1:min(4, nrow(df)), "source"]
       #cat("Using top 5 sources.\n")
     }
 
@@ -86,25 +86,52 @@ server = function(input, output) {
     #print(names(ellipse))
     #print(names(input))
 
+    use_ggplotly = T
+
+
+    ####
+    # Generate plot with source data.
+    # These should be ellipses but plot_ly() doesn't support them :/
+    if (!use_ggplotly) {
+      p = plot_ly(ellipse, x = ~x, y = ~y, split = ~source,
+                text = ~paste0("Anid = ", anid),
+                #text = ~tooltip,
+                type = "scatter", mode = "markers") %>%
+          layout(#title = "Archeological Geochemistry",
+             margin = list(t = 50),
+             xaxis = list(title = names(elements)[elements == input$element1],
+                          side = "top"),
+             yaxis = list(title = names(elements)[elements == input$element2]),
+             legend = list(orientation = "h"))
     # Must have 3 or more observations to plot an ellipse
     #p <- ggplot(data, aes(x = x, y = y)) +
-    p <- ggplot(ellipse, mapping=aes(x = x, y = y, group = source, color = source, label=anid)) +
-      ggtitle("Archeological Geochemistry") +
-      stat_ellipse(aes(group=source)) +
-      xlab(names(elements)[elements == input$element1]) +
-      ylab(names(elements)[elements == input$element2]) +
-      #theme_minimal() + theme(legend.position="none")
-      theme_minimal() +
-      guides(color = guide_legend(nrow = 2)) +
-      theme(#plot.background = element_rect(color = "#e3e3e3", fill="#f7f7f7"),
+    } else {
+      ####
+      # ggplotly version
+      p <- ggplot(ellipse,
+                  mapping = aes(x = x, y = y,
+                                #text = tooltip,
+                                group = source,
+                                color = source))+#, label=anid)) +
+      #ggtitle("Archeological Geochemistry") +
+        #stat_ellipse(aes(group = source)) +
+        stat_ellipse() +
+        xlab(names(elements)[elements == input$element1]) +
+        ylab(names(elements)[elements == input$element2]) +
+        #theme_minimal() + theme(legend.position="none")
+        theme_minimal() +
+        guides(color = guide_legend(nrow = 2)) +
+        theme(#plot.background = element_rect(color = "#e3e3e3", fill="#f7f7f7"),
             panel.background = element_rect(fill = "white"),
             legend.position = "bottom",
             legend.title = element_blank(),
             panel.border = element_rect(fill = NA, colour = "#e3e3e3")#,
       #       legend.position = "none"
-      )
+        )
+    }
 
 
+    # Old testing stuff, ignore.
     if (F) {
       p2 <- ggplot(data, aes(x = x, y = y, colour=source)) +
         stat_ellipse(aes(x = x, y = y, group=source), data=ellipse)
@@ -117,39 +144,87 @@ server = function(input, output) {
       p3
     }
 
+    # Re-enable this once ellipses are working.
     if (input$show_source_data) {
       #p = p + geom_point()
       #p = p + geom_point_interactive(mapping=aes(tooltip = tooltip, onclick = "", data_id = 1:nrow(ellipse)))#, data_id = ANID))
-      p = p + geom_point(mapping=aes(tooltip = tooltip, onclick = "", data_id = 1:nrow(ellipse)))#, data_id = ANID))
+
+      # ggplotly version:
+      if (use_ggplotly) {
+        p = p + geom_point(mapping=aes(tooltip = tooltip, onclick = "",
+                                       data_id = 1:nrow(ellipse)))#, data_id = ANID))
+      } else {
+
+      # plotly version:
+      }
     }
 
-    if (input$label_source_points) {
-      p = p + geom_text(data=ellipse, check_overlap=T, size=2.5)
+
+    # Re-enable this when ready.
+    if (F && input$label_source_points) {
+      # ggplotly() version:
+      if (use_ggplotly) {
+        p = p + geom_text(data=ellipse, check_overlap=T, size=2.5)
+      } else {
+        # plot_ly() version:
+        p = p %>% add_text(textposition = "top right")
+      }
     }
 
 
     # Handle uploaded data if there is any.
-    if (!is.null(input$file1)) {
+    if (T && !is.null(input$file1)) {
       upload = read.csv(input$file1$datapath)
       if (!"SiteID" %in% names(upload)) {
         upload$SiteID = ""
       }
       upload = upload[, c(input$element1, input$element2, "SampleID", "SiteID")]
-      colnames(upload) = c("x", "y", colnames(upload)[3:4])
-      upload$tooltip = paste0("Sample ID: ", upload$SampleID,
-              ifelse(upload$SiteID == "", "", paste0("<br />Site ID: ", upload$SiteID)))
+      colnames(upload) = c("X", "Y", colnames(upload)[3:4])
+      #upload$tooltip = paste0("Sample ID: ", upload$SampleID,
+      #        ifelse(upload$SiteID == "", "", paste0("<br />Site ID: ", upload$SiteID)))
       #p = p + geom_point_interactive(aes(x=x, y=y, data=upload))
       #p = p + geom_point_interactive(data=upload,
-      p = p + geom_point(data=upload,
+
+      #######
+      # ggplotly version:
+      if (use_ggplotly) {
+        if (input$plot_artifact_points) {
+          p = p + geom_point(data=upload,
                 #aes(x=x, y=y, group=SiteID, color=SiteID, alpha = 0.8,
-                mapping=aes(x=x, y=y, group=SiteID,
-                    color=factor(SiteID, labels=paste("Site", unique(SiteID))),
-                    alpha = 0.8, label = NULL,
+                # SampleID will generate a warning, but we need it for tooltip.
+                mapping = aes(x = X, y = Y, group = SiteID, SampleID = SampleID,
+                    color = factor(SiteID, labels = paste("Site", unique(SiteID))),
+                    alpha = 0.8, label = NULL)#,
                     #shape=I(15),
-                    tooltip = tooltip, data_id = 1:nrow(upload))) +
-        guides(alpha=F) + scale_color_discrete()
+                    #tooltip = tooltip, data_id = 1:nrow(upload))
+                ) +
+          guides(alpha=F) + scale_color_discrete()
+        }
         #scale_size(guide = F)
         #scale_shape_identity()
+
+        if (input$plot_artifact_ellipses) {
+          p = p + stat_ellipse(data=upload,
+                               aes(x = X, y = Y, group = SiteID,
+                                   color = factor(SiteID, labels = paste("Site", unique(SiteID)))))
+          #p = p + stat_ellipse()
+        }
+
+        if (input$plot_artifact_labels) {
+          p = p + geom_text(data = upload,
+                            mapping = aes(x = X, y = Y, group = SiteID,
+                                color = factor(SiteID),
+                                label = SampleID),
+                            check_overlap = T, size = 2.5, show.legend = F)
+        }
+      } else {
+      #######
+      # plot_ly version:
+        p = p %>% add_trace(data = upload, x = ~x, y = ~y, split = ~SiteID,
+                          text = ~paste0("SampleId = ", SampleID), type = "scatter",
+                          marker = list(symbol = "cross"))
+      }
+
     }
 
     #print(p)
@@ -160,9 +235,18 @@ server = function(input, output) {
 
     margin = list(l = 0, r = 300, b = 0, t = 50, pad = 0)
     #margin = list()
-    p = plotly::ggplotly(p) %>%
-      plotly::layout(legend = list(orientation = "h"))  %>%
-      config(displayModeBar = F)
+    if (use_ggplotly) {
+      p = plotly::ggplotly(p, tooltip = c("X", "Y", "SiteID", "SampleID")) %>%
+        #plotly::layout(margin = list(t = 50),
+        plotly::layout(margin = list(t = 50)) %>%#,
+          #legend = list(orientation = "h", y = 0))  %>%
+        config(displayModeBar = F)
+    } else {
+      p = p %>%
+        #plotly::layout(legend = list(orientation = "h"))  %>%
+        config(displayModeBar = F)
+    }
+
     p
 
   })#, height=700)

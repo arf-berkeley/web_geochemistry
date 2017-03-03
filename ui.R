@@ -21,10 +21,11 @@ fluidPage(
     #),
     #selectInput('type', 'Type', c("Source")),
     checkboxInput('show_source_data', "Show source datapoints"),
-    checkboxInput('label_source_points', "Show source labels"),
+    # Disabling this because tooltip shows the same info.
+    #checkboxInput('label_source_points', "Show source labels"),
 
-    selectInput('element1', 'X Element', elements, "Zr"),
-    selectInput('element2', 'Y Element', elements, "Rb"),
+    selectInput('element1', 'Horizontal element (X)', elements, "Zr"),
+    selectInput('element2', 'Vertical element (Y)', elements, "Rb"),
 #    actionButton("plot", label = "Plot"),
     tags$hr(),
 
@@ -33,7 +34,9 @@ fluidPage(
                        'text/comma-separated-values,text/plain',
                        '.csv')),
 
-    checkboxInput('plot_artifact_ellipses', "Plot artifact ellipses (TODO)")
+    checkboxInput('plot_artifact_points', "Plot artifact points", T),
+    checkboxInput('plot_artifact_labels', "Label artifact points"),
+    checkboxInput('plot_artifact_ellipses', "Plot artifact ellipses")
   ),
 
   mainPanel(

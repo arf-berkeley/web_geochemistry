@@ -1,8 +1,10 @@
 library(readxl)
 
-elements = list("Manganese (ppm)"="Mn", "Rubidium (ppm)"="Rb", "Strontium (ppm)"="Sr",
+elements = list("Manganese (ppm)" = "Mn",
+                "Rubidium (ppm)" = "Rb",
+                "Strontium (ppm)" = "Sr",
                 #"Zinc (zn)"="Zn")
-                "Zirconium (ppm)"="Zr")
+                "Zirconium (ppm)" = "Zr")
 
 source_data = function() {
   data = readxl::read_excel("inbound/Obsidian_NAA_S-America_MURR2015.xlsx", 3)
