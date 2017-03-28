@@ -1,8 +1,11 @@
 library(readxl)
 
 elements = list("Manganese (ppm)" = "Mn",
+                "Iron (ppm)" = "Fe",
+                "Niobium (ppm)" = "Nb",
                 "Rubidium (ppm)" = "Rb",
                 "Strontium (ppm)" = "Sr",
+                "Yttrium (ppm)" = "Y",
                 #"Zinc (zn)"="Zn")
                 "Zirconium (ppm)" = "Zr")
 
