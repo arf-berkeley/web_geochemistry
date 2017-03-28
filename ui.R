@@ -24,8 +24,8 @@ fluidPage(
     # Disabling this because tooltip shows the same info.
     #checkboxInput('label_source_points', "Show source labels"),
 
-    selectInput('element1', 'Horizontal element (X)', elements, "Zr"),
-    selectInput('element2', 'Vertical element (Y)', elements, "Rb"),
+    selectInput('element1', 'Horizontal element (X)', elements, "Rb"),
+    selectInput('element2', 'Vertical element (Y)', elements, "Sr"),
 #    actionButton("plot", label = "Plot"),
     tags$hr(),
 
