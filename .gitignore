@@ -1,0 +1,5 @@
+### Sublime Text project/workspace files
+*.sublime*
+
+### Ignore the testing/ directory
+testing/*

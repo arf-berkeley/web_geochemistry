@@ -1,57 +1,58 @@
 library(shiny)
 library(ggplot2)
-#library(ggiraph)
 library(shinyBS)
 
 source("function_library.R")
 
 fluidPage(
+	titlePanel("Geochemical Visualization – South America"),
 
-  titlePanel("Geochemical Visualization – South America"),
+	sidebarPanel(
+		selectInput('region', 'Region', unique(source_data()$Site_Country), "Peru"),
 
-  sidebarPanel(
+		bsCollapse(id="sources",
+			bsCollapsePanel(title = "Choose Obsidian Sources",
+				"MURR Neutron Activation Analysis",
+				uiOutput("source_checkbox_group"),
+				style="primary")
+			),
 
-    selectInput('region', 'Region', unique(source_data()$Site_Country), "Peru"),
-    bsCollapse(id = "sources",# open = "Panel 2",
-               bsCollapsePanel("Choose Obsidian Sources", #"temp", style = "warning")),
-                               "MURR Neutron Activation Analysis",
-                               #htmlOutput("MURR Neutron Activation Analysis"),
-                               uiOutput("source_checkbox_group"),
-                               style = "warning")),
-    #),
-    #selectInput('type', 'Type', c("Source")),
-    checkboxInput('show_source_data', "Show source datapoints"),
-    # Disabling this because tooltip shows the same info.
-    #checkboxInput('label_source_points', "Show source labels"),
+		checkboxInput(inputId='show_source_data',
+			label="Show source datapoints",
+			value=FALSE),
 
-    selectInput('element1', 'Horizontal element (X)', elements, "Rb"),
-    selectInput('element2', 'Vertical element (Y)', elements, "Sr"),
-#    actionButton("plot", label = "Plot"),
-    tags$hr(),
+		### Selection for dependent variables
+		selectInput(inputId='element1',
+			label='Horizontal element (X)',
+			choices=elements,
+			selected="Rb"),
+		selectInput(inputId='element2',
+			label='Vertical element (Y)',
+			choices=elements,
+			selected="Sr"),
 
-    fileInput('file1', 'Upload artifact data', multiple=F,
-              accept=c('text/csv',
-                       'text/comma-separated-values,text/plain',
-                       '.csv')),
+		### Just a horizontal line across the UI (part of shiny::tags - HTML Tags)
+		### https://shiny.rstudio.com/articles/html-tags.html
+		tags$hr(),
 
-    checkboxInput('plot_artifact_points', "Plot artifact points", T),
-    checkboxInput('plot_artifact_labels', "Label artifact points"),
-    checkboxInput('plot_artifact_ellipses', "Plot artifact ellipses")
-  ),
+		fileInput('file1', 'Upload artifact data', multiple=FALSE,
+			accept=c('text/csv',
+				'text/comma-separated-values,text/plain',
+				'.csv')
+			),
 
-  mainPanel(
-    #plotOutput('plot'),
-    # this is an extra div used ONLY to create positioned ancestor for tooltip
-    # we don't change its position
-    #div(
-      #style = "position:relative",
-      #ggiraph::ggiraphOutput("plot")
-      plotly::plotlyOutput("plot")
-      #verbatimTextOutput("x")
+		checkboxInput(inputId='plot_artifact_points',
+			label="Plot artifact points",
+			value=TRUE),
+		checkboxInput(inputId='plot_artifact_labels',
+			label="Label artifact points",
+			value=FALSE),
+		checkboxInput(inputId='plot_artifact_ellipses',
+			label="Plot artifact ellipses",
+			value=FALSE)
+	),
 
-      #plotOutput("plot")#,
-                 #hover = hoverOpts("plot_hover", delay = 100, delayType = "debounce")),
-      #uiOutput("hover_info")
-    #)
-  )
+	mainPanel(
+		plotly::plotlyOutput("plot")
+	)
 )
