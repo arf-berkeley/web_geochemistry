@@ -1,5 +1,8 @@
-library(readxl)
+print("Running 'function_library.R'.")
 
+library("readxl")
+
+# Ba	La	Lu	Nd	Sm	U	Yb	Ce	Co	Cs	Eu	Fe	Hf	Rb	Sb	Sc	Sr	Ta	Tb	Th	Zn	Zr	Br	Al	Cl	Dy	K	Mn	Na
 elements = list("Manganese (ppm)" = "Mn",
                 "Iron (ppm)" = "Fe",
                 "Niobium (ppm)" = "Nb",
