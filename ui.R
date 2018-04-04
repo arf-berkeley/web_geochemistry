@@ -1,31 +1,39 @@
+print("")
+print("")
+print("Beginning new interation...")
 print("Running 'ui.R'.")
 
 library("shiny")
 # library("DT")
 
-source("function_library.R")
+source("config.R")
 
 fixedPage(
 	titlePanel("Geochemical Visualization – South America"),
 
 	fixedRow(
 		column(3,
-			fixedRow(style="margin:0px 0px 10px;border-radius:20px;padding:0px 10px 0px;background-color:#F0F8FF;border:1px solid #A9A9A9;",
-				tags$h4(tags$ul(tags$u("Source Information"))),
-				# tags$hr(),
-
-				selectInput('region', 'Region', unique(source_data()$Site_Country), "Peru"),
+			tags$h4(tags$ul(tags$u("Source Information"))),
+			fixedRow(style=my_sidepanel_style,
+				selectInput(inputId='country',
+					label='Country',
+					choices=country_labels,
+					# selected=country_labels[0]
+					selected="Peru (324)"
+				),
 
 				shinyBS::bsCollapse(id="sources",
 					shinyBS::bsCollapsePanel(title="Choose Obsidian Sources",
-						"MURR Neutron Activation Analysis",
-						uiOutput("source_checkbox_group"),
-						style="primary")
+							# label="MURR Neutron Activation Analysis",
+							style="default",
+							uiOutput("source_selection")
+						)
 					),
-
-				checkboxInput(inputId='show_source_data',
-					label="Show source datapoints",
-					value=FALSE),
+				# selectInput(inputId='sources',
+				# 	label='Sources',
+				# 	choices=output$sources,
+				# 	selected=output$source_selection
+				# ),
 
 				### Selection for dependent variables
 				selectInput(inputId='element1',
@@ -38,26 +46,49 @@ fixedPage(
 					selected="Sr")
 			),
 
-			# fixedRow(style="background-color:green;"),
-
-			fixedRow(style="margin:10px 0px 0px;border-radius:20px;padding:0px 10px 0px;background-color:#F0F8FF;border:1px solid #A9A9A9;",
+			tags$h4(tags$ul(tags$u("Artifact Information"))),
+			fixedRow(style=my_sidepanel_style,
 				### Just a horizontal line across the UI (part of shiny::tags - HTML Tags)
 				### https://shiny.rstudio.com/articles/html-tags.html
-				# tags$hr(),
-				tags$h4(tags$ul(tags$u("Artifact Information"))),
 
-				radioButtons(inputId='selection',
+				# p(class='text-center',
+				radioButtons(inputId='input_selection',
 					label="Upload Data",
 					choices=list("Source", "Artifact"),
 					inline=TRUE
 				),
+				# ),
+
 				fileInput('file1',
 					label=NULL,
 					multiple=FALSE,
 					accept=c('text/csv',
 						'text/comma-separated-values,text/plain',
-						'.csv')
-					),
+						'.csv'
+					)
+				),
+
+				# tags$hr(),
+
+				radioButtons(inputId='output_selection',
+					label="Download Data",
+					choices=list("CSV", "XLSX", "ODS"),
+					inline=TRUE
+				),
+				p(class='text-center',
+					downloadButton(outputId='x3',
+						label="Download Updated Table"
+					)
+				)
+			),
+
+			tags$h4(tags$ul(tags$u("Plot Options"))),
+			fixedRow(style=my_sidepanel_style,
+				### Just a horizontal line across the UI (part of shiny::tags - HTML Tags)
+				### https://shiny.rstudio.com/articles/html-tags.html
+				checkboxInput(inputId='show_source_data',
+					label="Show source datapoints",
+					value=FALSE),
 
 				checkboxInput(inputId='plot_artifact_points',
 					label="Plot artifact points",
@@ -81,7 +112,7 @@ fixedPage(
 			),
 			fixedRow(
 				# style="background-color:#F0F8FF;border:1px solid #A9A9A9;"
-				DT::dataTableOutput('table')
+				DT::DTOutput("table")
 			)
 		)
 	)

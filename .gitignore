@@ -3,3 +3,6 @@
 
 ### Ignore the testing/ directory
 testing/*
+
+### Ignore files associated with shinyapps.io
+rsconnect
