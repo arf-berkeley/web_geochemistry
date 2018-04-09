@@ -11,10 +11,9 @@ source("config.R")
 fixedPage(
 	titlePanel("Geochemical Visualization – South America"),
 
-	fixedRow(
-		column(3,
-			tags$h4(tags$ul(tags$u("Source Information"))),
-			fixedRow(style=my_sidepanel_style,
+	column(3,
+		shinyBS::bsCollapse(id="sidepanel", open=c("Source Information", "File Management"), multiple=TRUE,
+			shinyBS::bsCollapsePanel(title="Source Information", style="info",
 				selectInput(inputId='country',
 					label='Country',
 					choices=country_labels,
@@ -23,12 +22,10 @@ fixedPage(
 				),
 
 				shinyBS::bsCollapse(id="sources",
-					shinyBS::bsCollapsePanel(title="Choose Obsidian Sources",
-							# label="MURR Neutron Activation Analysis",
-							style="default",
+					shinyBS::bsCollapsePanel(title="Choose Obsidian Sources", style="default",
 							uiOutput("source_selection")
-						)
-					),
+					)
+				),
 				# selectInput(inputId='sources',
 				# 	label='Sources',
 				# 	choices=output$sources,
@@ -39,25 +36,22 @@ fixedPage(
 				selectInput(inputId='element1',
 					label='Horizontal element (X)',
 					choices=elements,
-					selected="Rb"),
+					selected="Rb"
+				),
+
 				selectInput(inputId='element2',
 					label='Vertical element (Y)',
 					choices=elements,
-					selected="Sr")
+					selected="Sr"
+				)
 			),
 
-			tags$h4(tags$ul(tags$u("Artifact Information"))),
-			fixedRow(style=my_sidepanel_style,
-				### Just a horizontal line across the UI (part of shiny::tags - HTML Tags)
-				### https://shiny.rstudio.com/articles/html-tags.html
-
-				# p(class='text-center',
+			shinyBS::bsCollapsePanel(title="File Management", style="info",
 				radioButtons(inputId='input_selection',
 					label="Upload Data",
 					choices=list("Source", "Artifact"),
 					inline=TRUE
 				),
-				# ),
 
 				fileInput('file1',
 					label=NULL,
@@ -67,8 +61,6 @@ fixedPage(
 						'.csv'
 					)
 				),
-
-				# tags$hr(),
 
 				radioButtons(inputId='output_selection',
 					label="Download Data",
@@ -82,10 +74,7 @@ fixedPage(
 				)
 			),
 
-			tags$h4(tags$ul(tags$u("Plot Options"))),
-			fixedRow(style=my_sidepanel_style,
-				### Just a horizontal line across the UI (part of shiny::tags - HTML Tags)
-				### https://shiny.rstudio.com/articles/html-tags.html
+			shinyBS::bsCollapsePanel(title="Options", style="info",
 				checkboxInput(inputId='show_source_data',
 					label="Show source datapoints",
 					value=FALSE),
@@ -100,20 +89,11 @@ fixedPage(
 					label="Plot artifact ellipses",
 					value=FALSE)
 			)
-		),
-
-		column(9, #style="background-color:#F0F8FF;border:1px solid #A9A9A9;",
-			fixedRow(
-				column(1),
-				column(10,
-					plotly::plotlyOutput("plot")
-				),
-				column(1)
-			),
-			fixedRow(
-				# style="background-color:#F0F8FF;border:1px solid #A9A9A9;"
-				DT::DTOutput("table")
-			)
 		)
+	),
+
+	column(9, #style="background-color:#F0F8FF;border:1px solid #A9A9A9;",
+		fixedRow(plotly::plotlyOutput("plot")),
+		fixedRow(DT::DTOutput("table"))
 	)
 )
