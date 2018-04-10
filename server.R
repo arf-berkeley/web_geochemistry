@@ -147,16 +147,20 @@ server = function(input, output) {
 		# print(input$table_cell_clicked)
 		# print(output)
 
-		test = DT::datatable(tab,
+		DT::datatable(tab,
 			class="compact hover cell-border",
 			rownames=FALSE,
-			filter="top",
+			# filter="top",
+			extensions="FixedHeader", #https://rstudio.github.io/DT/extensions.html#fixedheader
 			options=list(
+				dom='fti',
 				columnDefs=list(list(
 					className="dt-center", targets="_all"
 				)),
-				# autoWidth=TRUE,
-				pageLength=10
+				pageLength=-1,
+				### 'fixedHeader' is not working and is likely a bug
+				### https://github.com/rstudio/DT/issues/389
+				fixedHeader=TRUE
 			),
 			editable=TRUE
 		)
