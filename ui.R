@@ -9,13 +9,14 @@ library("shiny")
 source("config.R")
 
 fixedPage(
+	includeCSS("styles.css"),
 	titlePanel("Geochemical Visualization – South America"),
 
 	column(3,
 		shinyBS::bsCollapse(id="sidepanel", open=c("Source Information", "File Management"), multiple=TRUE,
 			shinyBS::bsCollapsePanel(title="Source Information", style="info",
 				selectInput(inputId='country',
-					label='Country',
+					label='Country (# Sources)',
 					choices=country_labels,
 					# selected=country_labels[0]
 					selected="Peru (324)"
@@ -47,29 +48,32 @@ fixedPage(
 			),
 
 			shinyBS::bsCollapsePanel(title="File Management", style="info",
-				radioButtons(inputId='input_selection',
-					label="Upload Data",
-					choices=list("Source", "Artifact"),
-					inline=TRUE
-				),
-
-				fileInput('file1',
-					label=NULL,
-					multiple=FALSE,
-					accept=c('text/csv',
-						'text/comma-separated-values,text/plain',
-						'.csv'
+				tags$b("Upload source or artifact data"),
+				tags$div(class="my-center",
+					radioButtons(inputId='input_selection',
+						label=NA,
+						choices=list("Source", "Artifact"),
+						inline=TRUE
+					),
+					fileInput('file1',
+						label=NULL,
+						multiple=FALSE,
+						accept=c('text/csv',
+							'text/comma-separated-values,text/plain',
+							'.csv'
+						)
 					)
 				),
 
-				radioButtons(inputId='output_selection',
-					label="Download Data",
-					choices=list("CSV", "XLSX", "ODS"),
-					inline=TRUE
-				),
-				p(class='text-center',
+				tags$b("Download updated table"),
+				tags$div(class="my-center",
+					radioButtons(inputId='output_selection',
+						label=NA,
+						choices=list("CSV", "XLSX", "ODS"),
+						inline=TRUE
+					),
 					downloadButton(outputId='x3',
-						label="Download Updated Table"
+						label="Download"
 					)
 				)
 			),

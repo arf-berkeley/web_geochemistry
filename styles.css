@@ -1,0 +1,29 @@
+/* My CSS configuration */
+.my-center {
+	text-align: center;
+}
+
+.radio-inline {
+	width: auto;
+	vertical-align: super;
+}
+
+.btn {
+	padding: 5px;
+	vertical-align: center;
+}
+
+/* Controls the properties for almost all Shiny widgets */
+.form-group {
+	margin-bottom: 0px;
+}
+
+/* Controls the file input widget */
+.progress{
+	margin-bottom: 8px;
+}
+
+/*div {
+	margin: auto;
+	border: 1px solid black;
+}*/
