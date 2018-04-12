@@ -55,17 +55,30 @@ fixedPage(
 			shinyBS::bsCollapsePanel(title="File Management", style="info",
 				tags$b("Upload source or artifact data"),
 				tags$div(class="my-center",
-					radioButtons(inputId='input_selection',
+					radioButtons(inputId='upload_format_type',
 						label=NA,
 						choices=list("Source", "Artifact"),
 						inline=TRUE
 					),
-					fileInput('file1',
+					fileInput(inputId='upload_files',
 						label=NULL,
-						multiple=FALSE,
+						multiple=TRUE,
 						accept=c('text/csv',
 							'text/comma-separated-values,text/plain',
 							'.csv'
+						)
+					)
+				),
+
+				tags$div(style="margin-bottom:16px;",
+					conditionalPanel(
+						# condition="typeof input.upload_files == 'object'",
+						condition='typeof input["upload_files"] == "object"',
+						# condition="input.upload_format_type == 'Source'",
+						# condition='output["test"]',
+						# 'true',
+						shinyBS::bsCollapsePanel(title="View uploaded files", style="default",
+							"Uploaded files go here!"
 						)
 					)
 				),
@@ -86,24 +99,24 @@ fixedPage(
 			shinyBS::bsCollapsePanel(title="Options", style="info",
 				checkboxInput(inputId='show_source_data',
 					label="Show source datapoints",
-					value=FALSE),
-
-				checkboxInput(inputId='plot_artifact_points',
-					label="Plot artifact points",
-					value=TRUE),
-				checkboxInput(inputId='plot_artifact_labels',
-					label="Label artifact points",
-					value=FALSE),
-				checkboxInput(inputId='plot_artifact_ellipses',
-					label="Plot artifact ellipses",
 					value=FALSE)
+
+				# checkboxInput(inputId='plot_artifact_points',
+				# 	label="Plot artifact points",
+				# 	value=TRUE),
+				# checkboxInput(inputId='plot_artifact_labels',
+				# 	label="Label artifact points",
+				# 	value=FALSE),
+				# checkboxInput(inputId='plot_artifact_ellipses',
+				# 	label="Plot artifact ellipses",
+				# 	value=FALSE)
 			)
 		)
 	),
 
 	column(9, #style="background-color:#F0F8FF;border:1px solid #A9A9A9;",
 		fixedRow(plotly::plotlyOutput("plot", height="350px", width="auto")),
-		
+		# renderText("Hello World.")
 		### Controlling the style using 'div.dataTables_wrapper' in 'styles.css'
 		fixedRow(DT::DTOutput("table"))
 	)

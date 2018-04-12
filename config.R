@@ -1,6 +1,7 @@
 print("Running 'config.R'.")
 
 library("readxl")
+library("dplyr")
 
 # Ba	La	Lu	Nd	Sm	U	Yb	Ce	Co	Cs	Eu	Fe	Hf	Rb	Sb	Sc	Sr	Ta	Tb	Th	Zn	Zr	Br	Al	Cl	Dy	K	Mn	Na
 elements = list("Manganese (ppm)" = "Mn",
@@ -73,3 +74,37 @@ if (length(source_countries) == 0) {
 }
 
 country_labels = vectorof_count_labels(source_country_df)
+
+available_source_table = function(country) {
+	# Selects the 'sources' from a given 'country'
+	# Used for the shinyBS::bsCollapsePanel() display
+	#
+	# Reacts to:
+	#	input$country
+	# Outputs:
+	#	output$source_selection
+	# cat("\tEvaluating available_source_counts()\n")
+	# print(glue::glue("Observing updated country: '{current_country()}'")) # Status message for observe() event
+
+	### Filters data by the 'country', then selects 'Source.Name', counts all the unique entires using 'table()', then converts to a Data.Frame
+	df = data %>% filter(Site.Country == country) %>% select(Source.Name) %>% table %>% data.frame
+	colnames(df) = c("Source.Name", "Count")
+
+	### Filters the 'Source.Name' that appear less than three times or are empty
+	present = df %>% filter(Count >= 3 & Source.Name != "")
+	return(present)
+}
+
+available_source_count_labels = function(country) {
+	return(vectorof_count_labels(available_source_table(country)))
+}
+
+default_source_count_labels = function(country) {
+	available = available_source_table(country)
+	default = available %>% arrange(desc(Count)) %>% head(5)
+	return(vectorof_count_labels(default))
+}
+
+default_sources = function(country) {
+	return(vectorof_labels(default_source_count_labels(country)))
+}
