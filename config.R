@@ -1,6 +1,6 @@
 print("Running 'config.R'.")
 
-library("readxl")
+# library("readxl")
 library("dplyr")
 
 # Ba	La	Lu	Nd	Sm	U	Yb	Ce	Co	Cs	Eu	Fe	Hf	Rb	Sb	Sc	Sr	Ta	Tb	Th	Zn	Zr	Br	Al	Cl	Dy	K	Mn	Na
@@ -13,16 +13,16 @@ elements = list("Manganese (ppm)" = "Mn",
                 #"Zinc (zn)"="Zn")
                 "Zirconium (ppm)" = "Zr")
 
-source_data = function() {
-  data = readxl::read_excel("data/Obsidian_NAA_S-America_MURR2015.xlsx", 3)
+# source_data = function() {
+#   data = readxl::read_excel("data/Obsidian_NAA_S-America_MURR2015.xlsx", 3)
 
-  data = as.data.frame(data)
+#   data = as.data.frame(data)
 
-  # Replace spaces with underscores in column names.
-  colnames(data) = sub(" ", "_", colnames(data))
+#   # Replace spaces with underscores in column names.
+#   colnames(data) = sub(" ", "_", colnames(data))
 
-  data
-}
+#   data
+# }
 
 # my_border_color="#E2E2E2"
 my_border_color="#BCE8F1" # From shinyBS 'primary'

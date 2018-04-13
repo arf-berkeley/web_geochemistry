@@ -120,59 +120,47 @@ server = function(input, output) {
 	})
 
 	check_x = observeEvent(selected_x(), {
-		print("New selection: x")
+		# print("New selection: x")
 		internal <<- setx(internal, selected_x())
 	})
 
 	check_y = observeEvent(selected_y(), {
-		print("New selection: y")
+		# print("New selection: y")
 		internal <<- sety(internal, selected_y())
 	})
 
-	# internal_df = reactive({
-	# 	temp = data %>% filter(Site.Country == selected_country()) %>% filter(Source.Name %in% isolate(selected_sources()))
-	# 	# temp = temp %>% filter(element_x() > 0 & element_y() > 0)
-	# 	temp = temp %>% group_by(Source.Name)
-	# 	return(temp)
-	# })
+	selected_points = observeEvent(input$table_rows_selected, {
+		### This makes the table reactive to points being selected
+		selection = input$table_rows_selected
+		data = internal@df %>% ungroup()
 
-	# element_x = reactive({
-	# 	return(input$element1)
-	# })
+		selected_data = data %>% filter(row_number() %in% selection)
+		print("")
+		print(select(selected_data, "ANID", internal@x, internal@y, "Source.Name"))
+		print(typeof(selected_data))
+		print(selection)
+		# if (length(selection) > 0) {
+		# 	print(data[selection,])
+		# 	print(" ")
+		# }
+		return(selected_data)
+	})
 
-	# element_y = reactive({
-	# 	return(input$element2)
-	# })
-
-	# selected_points = reactive({
-	# 	### This makes the table reactive to points being selected
-	# 	selection = input$table_rows_selected
-	# 	data = internal_df() %>% ungroup()
-
-	# 	selected_data = data %>% filter(row_number() %in% selection)
-	# 	print("")
-	# 	print(select(selected_data, "ANID", element_x(), element_y(), "Source.Name"))
-	# 	print(typeof(selected_data))
-	# 	print(selection)
-	# 	# if (length(selection) > 0) {
-	# 	# 	print(data[selection,])
-	# 	# 	print(" ")
-	# 	# }
-	# 	return(selected_data)
-	# })
-
-	# add_selected_points = reactive({
-	# 	geom_point(
-	# 		data=selected_points(),
-	# 		aes_string(x=element_x(), y=element_y(), fill="Source.Name"), 
-	# 		size=2,
-	# 		label="Selected",
-	# 		colour="black",
-	# 		fill="red",
-	# 		shape=21 # To get the outside border
-	# 	)
-	# 	# scale_fill_manual(name = "", values="black", label="Your Selection")
-	# })
+	add_selected_points = reactive({
+		print("Adding")
+		fig = fig + 
+			geom_point(
+				data=selected_points(),
+				aes_string(x=element_x(), y=element_y(), fill="Source.Name"), 
+				size=2,
+				label="Selected",
+				colour="black",
+				fill="red",
+				shape=21 # To get the outside border
+			)
+		# scale_fill_manual(name = "", values="black", label="Your Selection")
+		fig <<- fig
+	})
 
 	# check_input = observe({
 	# 	input$upload_files
@@ -235,17 +223,6 @@ server = function(input, output) {
 	# 	return(which((data[element_x()] == x) & (data[element_y()] == y)))
 	# }
 
-	# add_selected_plot_point = reactive({
-
-	# })
-
-	# initialize_plot = {
-		
-	# 	fig = 
-
-	# 	return(fig)
-	# }
-
 	### Initialize the plot
 	# 1) 
 	initialize_plot = reactive({
@@ -284,15 +261,6 @@ server = function(input, output) {
 					mapping=aes_string(x=x, y=y, color="Source.Name"),
 					inherit.aes=FALSE)
 		}
-
-		# print(tracker@order)
-
-		# print(fig$layers)
-		# index = getLayerIndex(tracker, "Tocomar")
-		# tracker <<- removeLayer(tracker, "Tocomar")
-		# fig = fig %>% ggedit::remove_geom('point', index)
-		# print(fig$layers)
-
 		fig <<- fig
 	})
 
@@ -322,27 +290,6 @@ server = function(input, output) {
 		}
 		fig <<- fig
 	})
-
-	# remove_source_from_plot = reactive({
-	# 	print(glue::glue("Removing {internal@last_source} from plot"))
-	# 	print(nrow(internal@df))
-	# 	df = internal@df %>% filter(Source.Name != internal@last_source) %>% select(internal@x, internal@y, Source.Name)
-	# 	print(nrow(df))
-	# 	# fig <<- fig +
-	# 	# 	stat_ellipse(data=df,
-	# 	# 		mapping=aes_string(x=internal@x, y=internal@y, group="Source.Name", color="Source.Name")
-	# 	# 	)
-	# })
-
-	#  = reactive({
-
-	# })
-
-	# fig = reactive({
-	# 	initialize_plot()
-	# 	redraw_plot()
-	# 	return(fig)
-	# })
 
 	# element_plot = reactive({
 	# 	p = fig
@@ -389,15 +336,7 @@ server = function(input, output) {
 			initialize_plot(),
 			selected_sources(),
 			input$show_source_points
-			# remove_source_from_plot()
 		), {
-			# for (i in names(fig)) {
-			# 	fp = glue::glue("ggplot/{i}.txt")
-			# 	print(fp)
-			# 	# print(typeof(fig[i]))
-			# 	lapply(fig[i], write, file=fp, append=TRUE)
-			# }
-			# print(names(fig))
 			output$plot = plotly::renderPlotly({
 				# cat("---renderPlotly\n")
 				# print(fig$data)
@@ -408,17 +347,12 @@ server = function(input, output) {
 						tooltip=c("x", "y")
 					) %>%
 					plotly::layout(
-						margin=list(
-							t = 50
-						),
+						margin=list(t=50),
 						legend=list(
 							x=1.0, y=0.5,
-							font=list(
-								family="Helvetica",
-								size=11
-							)
-							#bordercolor=my_border_color,
-							#borderwidth=1
+							font=list(family="Helvetica", size=11)
+							# bordercolor=my_border_color,
+							# borderwidth=1
 							#bgcolor=my_background_color
 						)
 					) #%>%
@@ -444,55 +378,53 @@ server = function(input, output) {
 			})
 	})
 
-	 # = pfig
+	#### Create the table
+	### https://shiny.rstudio.com/articles/datatables.html
+	### https://rstudio.github.io/DT/shiny.html
+	## DT::renderDataTable() takes an expression that returns a rectangular data object with column names, such as a data frame or a matrix.
+	output$table <- DT::renderDT({
+		# print("Running 'renderDataTable()'.")
+		# data = get_data()
+		# print(typeof(iris))
+		# print(typeof(data))
+		# data
+		if (!is.null(input$file1)) {
+			# print("     Uploaded file!")
+			# print(input$file1)
+			# tab = read.csv("data/obsidian-NAA-database.csv")
+			tab = internal_df()
+			# tab
+		} else {
+			# print("     No uploaded file...")
+			# tab = data.frame(Sample=character(),
+				# stringsAsFactors=FALSE)
+			tab = internal@df
+		}
 
-	# #### Create the table
-	# ### https://shiny.rstudio.com/articles/datatables.html
-	# ### https://rstudio.github.io/DT/shiny.html
-	# ## DT::renderDataTable() takes an expression that returns a rectangular data object with column names, such as a data frame or a matrix.
-	# output$table <- DT::renderDT({
-	# 	# print("Running 'renderDataTable()'.")
-	# 	# data = get_data()
-	# 	# print(typeof(iris))
-	# 	# print(typeof(data))
-	# 	# data
-	# 	if (!is.null(input$file1)) {
-	# 		# print("     Uploaded file!")
-	# 		# print(input$file1)
-	# 		# tab = read.csv("data/obsidian-NAA-database.csv")
-	# 		tab = internal_df()
-	# 		# tab
-	# 	} else {
-	# 		# print("     No uploaded file...")
-	# 		# tab = data.frame(Sample=character(),
-	# 			# stringsAsFactors=FALSE)
-	# 		tab = internal_df()
-	# 	}
+		tab = tab %>% select(ANID, Source.Name, input$element1, input$element2, NKT_edits)
 
-	# 	tab = tab %>% select(ANID, Site.Country, Source.Name, Long.Date, input$element1, input$element2, NKT_edits)
+		# cat("Selected data:")
+		# print(input$table_cell_clicked)
+		# print(output)
 
-	# 	# cat("Selected data:")
-	# 	# print(input$table_cell_clicked)
-	# 	# print(output)
-
-	# 	DT::datatable(tab,
-	# 		class="compact hover cell-border",
-	# 		rownames=FALSE,
-	# 		# filter="top",
-	# 		extensions="FixedHeader", # https://rstudio.github.io/DT/extensions.html#fixedheader
-	# 		options=list(
-	# 			dom='fti',
-	# 			columnDefs=list(list(
-	# 				className="dt-center", targets="_all"
-	# 			)),
-	# 			pageLength=-1,
-	# 			### 'fixedHeader' is not working and is likely a bug
-	# 			### https://github.com/rstudio/DT/issues/389
-	# 			fixedHeader=TRUE
-	# 		),
-	# 		editable=TRUE
-	# 	)
-	# })
+		DT::datatable(tab,
+			class="compact hover cell-border",
+			rownames=FALSE,
+			# filter="top",
+			extensions="FixedHeader", # https://rstudio.github.io/DT/extensions.html#fixedheader
+			options=list(
+				dom='fti',
+				columnDefs=list(list(
+					className="dt-center", targets="_all"
+				)),
+				pageLength=-1,
+				### 'fixedHeader' is not working and is likely a bug
+				### https://github.com/rstudio/DT/issues/389
+				fixedHeader=TRUE
+			),
+			editable=TRUE
+		)
+	})
 
 
 }

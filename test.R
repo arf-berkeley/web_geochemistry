@@ -1,16 +1,16 @@
 # library(readxl)
 # library(dplyr) # Includes: filter()
 
-source_data = function() {
-	data = readxl::read_excel("data/Obsidian_NAA_S-America_MURR2015.xlsx", 3)
+# source_data = function() {
+# 	data = readxl::read_excel("data/Obsidian_NAA_S-America_MURR2015.xlsx", 3)
 
-	data = as.data.frame(data)
+# 	data = as.data.frame(data)
 
-	# Replace spaces with underscores in column names.
-	colnames(data) = sub(" ", "_", colnames(data))
+# 	# Replace spaces with underscores in column names.
+# 	colnames(data) = sub(" ", "_", colnames(data))
 
-	data
-}
+# 	data
+# }
 
 data = read.csv("data/obsidian-NAA-database.csv")
 

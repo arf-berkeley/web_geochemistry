@@ -1,7 +1,7 @@
-# Dependencies:
-# 	shiny, readxl, glue, shinyBS, plotly, dplyr, DT
-# Install all of these using:
-# 	install.packages(c("shiny", "readxl", "glue", "shinyBS", "plotly", "dplyr", "DT"))
+### Dependencies:
+### 	shiny, readxl, glue, shinyBS, plotly, dplyr, DT
+### Install all of these using:
+### 	install.packages(c("shiny", "readxl", "glue", "shinyBS", "plotly", "dplyr", "DT"))
 
 print("")
 print("")
@@ -123,9 +123,9 @@ fixedPage(
 	),
 
 	column(9, #style="background-color:#F0F8FF;border:1px solid #A9A9A9;",
-		fixedRow(plotly::plotlyOutput("plot", height="350px", width="auto"))
+		fixedRow(plotly::plotlyOutput("plot", height="350px", width="auto")),
 		# renderText("Hello World.")
 		### Controlling the style using 'div.dataTables_wrapper' in 'styles.css'
-		# fixedRow(DT::DTOutput("table"))
+		fixedRow(DT::DTOutput("table"))
 	)
 )
