@@ -18,6 +18,14 @@ fixedPage(
 	titlePanel("Geochemical Visualization – South America"),
 
 	column(3,
+		tags$div(style=my_sidepanel_style,
+			tags$div(
+				"Weclome to the online geochemical visualization tool by UC Berkeley's Archaeological Research Facility!"
+			),
+			tags$div(style="margin-top:5px;margin-bottom:3px;",
+				"Learn about the tool", a("here", href='help.html', target='blank')
+			)
+		),
 		shinyBS::bsCollapse(id="sidepanel", open=c("Source Information", "File Management"), multiple=TRUE,
 			shinyBS::bsCollapsePanel(title="Source Information", style="info",
 				selectInput(inputId='country',
@@ -28,8 +36,8 @@ fixedPage(
 				),
 
 				shinyBS::bsCollapse(id="sources",
-					shinyBS::bsCollapsePanel(title="Choose Obsidian Sources", style="default",
-							uiOutput("source_selection")
+					shinyBS::bsCollapsePanel(title="Select Sources", style="default",
+						uiOutput("source_selection")
 					)
 				),
 				# selectInput(inputId='sources',
@@ -97,7 +105,7 @@ fixedPage(
 			),
 
 			shinyBS::bsCollapsePanel(title="Options", style="info",
-				checkboxInput(inputId='show_source_data',
+				checkboxInput(inputId='show_source_points',
 					label="Show source datapoints",
 					value=FALSE)
 
@@ -115,9 +123,9 @@ fixedPage(
 	),
 
 	column(9, #style="background-color:#F0F8FF;border:1px solid #A9A9A9;",
-		fixedRow(plotly::plotlyOutput("plot", height="350px", width="auto")),
+		fixedRow(plotly::plotlyOutput("plot", height="350px", width="auto"))
 		# renderText("Hello World.")
 		### Controlling the style using 'div.dataTables_wrapper' in 'styles.css'
-		fixedRow(DT::DTOutput("table"))
+		# fixedRow(DT::DTOutput("table"))
 	)
 )

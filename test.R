@@ -2,7 +2,7 @@
 # library(dplyr) # Includes: filter()
 
 source_data = function() {
-	data = readxl::read_excel("inbound/Obsidian_NAA_S-America_MURR2015.xlsx", 3)
+	data = readxl::read_excel("data/Obsidian_NAA_S-America_MURR2015.xlsx", 3)
 
 	data = as.data.frame(data)
 
@@ -12,7 +12,7 @@ source_data = function() {
 	data
 }
 
-data = read.csv("inbound/obsidian-NAA-database.csv")
+data = read.csv("data/obsidian-NAA-database.csv")
 
 typeof(data)
 colnames(data) = gsub(" ", "_", colnames(data))

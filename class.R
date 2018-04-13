@@ -1,19 +1,25 @@
 # library("dplyr")
+### Example of '%>%' usage: http://genomicsclass.github.io/book/pages/dplyr_tutorial.html#pipe-operator-
 
-source("config.R")
-
-data = read.csv("inbound/obsidian-NAA-database.csv")
+### Requires: 'config.R', but its already loaded by 'ui.R'
+data = read.csv("data/obsidian-NAA-database.csv")
 
 Internal = setClass("Internal",
 	slots = c(
 		df="data.frame",
 		country="character",
-		sources="character"
+		sources="character",
+		last_source="character",
+		x="character",
+		y="character"
 	),
 	prototype=list(
 		df=data,
 		country="",
-		sources=c()
+		sources=c(),
+		last_source="",
+		x="",
+		y=""
 	)#,
 	# validity=function(self) {
 	# 	if (!(self@country %in% source_countries)) {
@@ -64,7 +70,7 @@ setMethod(f="addSource",
 	definition=function(self, source){
 		self@sources = c(self@sources, source)
 		self@df = self@df %>% rbind(filter(data, Source.Name == source))
-		print(self@sources)
+		self@last_source = source
 		return(self)
 	}
 )
@@ -80,37 +86,79 @@ setMethod(f="removeSource",
 	definition=function(self, source){
 		self@sources = self@sources[self@sources != source]
 		self@df = self@df %>% filter(Source.Name != source)
-		print(self@sources)
+		self@last_source = source
 		return(self)
 	}
 )
 
-print(typeof(c("Alca-1", "Chivay", "Puzolana")))
-# # print(names(data))
-internal_data = Internal()
-internal_data = setCountry(internal_data, "Peru")
-internal_data = setSources(internal_data, c("Alca-1", "Chivay", "Puzolana"))
-print(nrow(internal_data@df))
-print(internal_data@country)
-print(internal_data@sources)
-internal_data = addSource(internal_data, "Alca-5")
-print(internal_data@sources)
-print(nrow(internal_data@df))
-internal_data = removeSource(internal_data, "Alca-5")
-print(internal_data@sources)
-print(nrow(internal_data@df))
-internal_data = removeSource(internal_data, "Alca-1")
-print(internal_data@sources)
-print(nrow(internal_data@df))
-# # print(internal_data)
+setGeneric(name="getSources",
+	def=function(self){
+		standardGeneric("getSources")
+	}
+)
 
-internal_data = setCountry(internal_data, "Colombia")
-print(nrow(internal_data@df))
-print(internal_data@country)
-internal_data = setSources(internal_data, c("Rio Hondo"))
-print(internal_data@sources)
-print(nrow(internal_data@df))
+setMethod(f="getSources",
+	signature="Internal",
+	definition=function(self){
+		return(self@sources)
+	}
+)
 
-internal_data = removeSource(internal_data, c("Rio Hondo"))
-print(internal_data@sources)
-print(nrow(internal_data@df))
+setGeneric(name="setx",
+	def=function(self, x){
+		standardGeneric("setx")
+	}
+)
+
+setMethod(f="setx",
+	signature="Internal",
+	definition=function(self, x){
+		self@x = x
+		return(self)
+	}
+)
+
+setGeneric(name="sety",
+	def=function(self, y){
+		standardGeneric("sety")
+	}
+)
+
+setMethod(f="sety",
+	signature="Internal",
+	definition=function(self, y){
+		self@y = y
+		return(self)
+	}
+)
+
+
+# print(typeof(c("Alca-1", "Chivay", "Puzolana")))
+# # # print(names(data))
+# internal_data = Internal()
+# internal_data = setCountry(internal_data, "Peru")
+# internal_data = setSources(internal_data, c("Alca-1", "Chivay", "Puzolana"))
+# print(nrow(internal_data@df))
+# print(internal_data@country)
+# print(internal_data@sources)
+# internal_data = addSource(internal_data, "Alca-5")
+# print(internal_data@sources)
+# print(nrow(internal_data@df))
+# internal_data = removeSource(internal_data, "Alca-5")
+# print(internal_data@sources)
+# print(nrow(internal_data@df))
+# internal_data = removeSource(internal_data, "Alca-1")
+# print(internal_data@sources)
+# print(nrow(internal_data@df))
+# # # print(internal_data)
+
+# internal_data = setCountry(internal_data, "Colombia")
+# print(nrow(internal_data@df))
+# print(internal_data@country)
+# internal_data = setSources(internal_data, c("Rio Hondo"))
+# print(internal_data@sources)
+# print(nrow(internal_data@df))
+
+# internal_data = removeSource(internal_data, c("Rio Hondo"))
+# print(internal_data@sources)
+# print(nrow(internal_data@df))

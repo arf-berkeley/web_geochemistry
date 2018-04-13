@@ -14,7 +14,7 @@ elements = list("Manganese (ppm)" = "Mn",
                 "Zirconium (ppm)" = "Zr")
 
 source_data = function() {
-  data = readxl::read_excel("inbound/Obsidian_NAA_S-America_MURR2015.xlsx", 3)
+  data = readxl::read_excel("data/Obsidian_NAA_S-America_MURR2015.xlsx", 3)
 
   data = as.data.frame(data)
 
@@ -24,15 +24,17 @@ source_data = function() {
   data
 }
 
-my_border_color="#E2E2E2"
-my_background_color="#F0F8FF"
+# my_border_color="#E2E2E2"
+my_border_color="#BCE8F1" # From shinyBS 'primary'
+# my_background_color="#F0F8FF"
+my_background_color="#D9EDF7" # From shinyBS 'primary'
 # my_background_color="#F5F5F5"
 
-my_sidepanel_style="margin:10px 0px 15px;border-radius:20px;padding:3px 10px 0px;background-color:{my_background_color};border:1px solid {my_border_color};"
+my_sidepanel_style="margin:0px 0px 5px;border-radius:5px;padding:2px 10px 4px;background-color:{my_background_color};border:1px solid {my_border_color};"
 my_sidepanel_style=glue::glue(my_sidepanel_style)
 
 ### Source the data when the session begins (occurs for both ui.R and server.R)
-data = read.csv("inbound/obsidian-NAA-database.csv")
+data = read.csv("data/obsidian-NAA-database.csv")
 
 vectorof_count_labels = function(df) {
 	# Used for string formating of labels for both source country and source displayed in 'ui.R'
@@ -58,15 +60,15 @@ extract_count_label = function(label) {
 	return(gsub("(.*)\\s\\(\\d+\\)", "\\1", label))
 }
 
+
 vectorof_labels = function(count_labels) {
 	temp = sapply(count_labels, extract_count_label)
 	return(as.vector(temp))
 }
 
-source_country_table = table(data$Site.Country)
-source_countries = names(source_country_table)
+source_country_table = data %>% select(Site.Country, Site.Name) %>% distinct(Site.Country, Site.Name) %>% select(Site.Country) %>% table
+source_countries = names(source_country_table) # Used for input validation in 'config.R' and 'class.R'
 source_country_df = data.frame(source_country_table)
-# print(head(source_country_df))
 
 ### Error handling for no countries in the file
 if (length(source_countries) == 0) {
