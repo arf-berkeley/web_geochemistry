@@ -27,10 +27,13 @@
 div.dataTables_wrapper {
 	width: 100%;
 	margin: 0 auto;
-	height: 500px;
-	overflow-y: scroll;
-	overflow-x: scroll;
-	/*border: 1px solid black;*/
+	margin-top: 25px;
+	height: 450px;
+	/*height: 400px;*/
+	/*overflow-y: scroll;
+	overflow-x: scroll;*/
+	/*border: 2px solid #BCE8F1;
+	border-radius:5px;*/
 }
 
 /*div {

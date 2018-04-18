@@ -6,3 +6,6 @@ testing/*
 
 ### Ignore files associated with shinyapps.io
 rsconnect
+
+### Temporary LibreOffice Calc Files
+.~lock.*

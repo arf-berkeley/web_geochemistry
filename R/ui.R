@@ -32,7 +32,7 @@ fixedPage(
 					label='Country (# Sources)',
 					choices=country_labels,
 					# selected=country_labels[0]
-					selected="Peru (324)"
+					selected="Peru (40)"
 				),
 
 				shinyBS::bsCollapse(id="sources",
@@ -126,6 +126,11 @@ fixedPage(
 		fixedRow(plotly::plotlyOutput("plot", height="350px", width="auto")),
 		# renderText("Hello World.")
 		### Controlling the style using 'div.dataTables_wrapper' in 'styles.css'
+		# shinyBS::bsCollapse(id="table_panel",
+		# 	shinyBS::bsCollapsePanel(title="View table", style="info",
+		# 		fixedRow(DT::DTOutput("table"))
+		# 	)
+		# )
 		fixedRow(DT::DTOutput("table"))
 	)
 )

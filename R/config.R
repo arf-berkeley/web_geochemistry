@@ -67,7 +67,7 @@ vectorof_labels = function(count_labels) {
 }
 
 source_country_table = data %>% select(Site.Country, Site.Name) %>% distinct(Site.Country, Site.Name) %>% select(Site.Country) %>% table
-source_countries = names(source_country_table) # Used for input validation in 'config.R' and 'class.R'
+source_countries = names(source_country_table) # Used for input validation in 'config.R'
 source_country_df = data.frame(source_country_table)
 
 ### Error handling for no countries in the file

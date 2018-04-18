@@ -6,12 +6,11 @@ library("ggplot2")
 ### No need because both are already in 'ui.R', which is loaded first
 # library("shiny") 
 # source("config.R") ### Requires: 'config.R', but its already loaded by 'ui.R'
-source("class.R")
-source("DynamicPlot.R")
+source("dynamic.R")
 
 server = function(input, output) {
 
-	internal = Internal()
+	internal = DynamicData()
 	tracker = DynamicPlot()
 
 	# state = observe({
@@ -22,10 +21,15 @@ server = function(input, output) {
 	# 	cat(paste("x:", selected_x(), "/", "y:", selected_y(), "\n"))
 	# })
 
-	### React to updating the 'country'
-	# RETURNS - string of selected 'country'
-	# Note: 'input$country' will be of the format 'Country (# Sources)'
-	# Therefore, 'extract_count_label()' from 'config.R' is used to extract only the 'country'
+	# #' React to updating the 'country'
+	# #'
+	# #' @return String of selected 'country'
+	# #' @details
+	# #' Note: 'input$country' will be of the format 'Country (# Sources)'
+	# #' Therefore, 'extract_count_label()' from 'config.R' is used to extract only the 'country'
+	# #' @examples
+	# #' count_label = 'Country (# Sources)'
+	# #' label = extract_count_label(count_label) # Holds 'Country'
 	selected_country = reactive({
 		cat("--selected_country\n")
 		return(extract_count_label(input$country))
@@ -62,6 +66,7 @@ server = function(input, output) {
 	# 3) Compares these two lists to determine if a source was added or removed
 	# 4) Applies the appropriate method ('addSource' or 'removeSource') to 'internal'
 	check_sources = observeEvent(selected_sources(), {
+		print(glue::glue("[observeEvent] Check Selected Sources"))
 		before = getSources(internal)
 		after = selected_sources()
 
@@ -74,15 +79,21 @@ server = function(input, output) {
 			df = internal@df %>%
 				filter(Source.Name == add) %>%
 				select(ANID, internal@x, internal@y, Source.Name)
-			tracker <<- addPathLayer(tracker, add)
+			tracker <<- addPath(tracker, add)
 			index = getPathIndex(tracker, add)
 
-			print(glue::glue("Adding {add} with {nrow(df)} artifacts to index {index}"))
+			print(glue::glue("\tAdding {add} with {nrow(df)} artifacts to index {index}"))
 
 			fig = fig +
 				stat_ellipse(df,
 					mapping=aes_string(x=internal@x, y=internal@y, color="Source.Name"),
 					inherit.aes=FALSE)
+
+			if (input$show_source_points) {
+				print(glue::glue("\tShow source points: True"))
+				add_source_point(add)
+			}
+
 			fig <<- fig
 
 
@@ -90,12 +101,20 @@ server = function(input, output) {
 			internal <<- removeSource(internal, remove)
 
 			index = getPathIndex(tracker, remove)
-			tracker <<- removePathLayer(tracker, remove)
+			tracker <<- removePath(tracker, remove)
 
-			print(glue::glue("Removing {remove} from index {index}"))
+			print(glue::glue("\tRemoving {remove} from index {index}"))
 
 			fig = fig %>% ggedit::remove_geom('path', index)
+
+			if (!input$show_source_points) {
+				print(glue::glue("\tShow source points: False"))
+				remove_source_point(remove)
+			}
+
 			fig <<- fig
+		} else {
+			print(glue::glue("\tNo changes to source selection"))
 		}
 	})
 
@@ -129,23 +148,6 @@ server = function(input, output) {
 		internal <<- sety(internal, selected_y())
 	})
 
-	selected_points = observeEvent(input$table_rows_selected, {
-		### This makes the table reactive to points being selected
-		selection = input$table_rows_selected
-		data = internal@df %>% ungroup()
-
-		selected_data = data %>% filter(row_number() %in% selection)
-		print("")
-		print(select(selected_data, "ANID", internal@x, internal@y, "Source.Name"))
-		print(typeof(selected_data))
-		print(selection)
-		# if (length(selection) > 0) {
-		# 	print(data[selection,])
-		# 	print(" ")
-		# }
-		return(selected_data)
-	})
-
 	add_selected_points = reactive({
 		print("Adding")
 		fig = fig + 
@@ -169,7 +171,6 @@ server = function(input, output) {
 	# })
 
 	# add_uploaded_points = reactive({
- # #+
 	# 	# scale_shape_identity(2)
 	# 	# guides(alpha=FALSE) +
 	# 	# scale_color_discrete()
@@ -194,34 +195,37 @@ server = function(input, output) {
 	# 	# }
 	# })
 
-	# observeEvent(plotly::event_data("plotly_click"), {
-	# 	print("Selection!")
-	# 	test = plotly::event_data("plotly_click")
-	# 	# print(typeof(test))
-	# 	# print(test)
-	# 	x = as.numeric(test[3])
-	# 	y = as.numeric(test[4])
-	# 	index = grab_plot_point(internal_df(), x, y)
-	# 	# print(nrow(internal_df()))
-	# 	print("Highlighting")
-	# 	geom_point(
-	# 		data=internal_df()[index,],
-	# 		aes_string(x=element_x(), y=element_y(), fill="Source.Name"), 
-	# 		size=2,
-	# 		# label="Selected",
-	# 		colour="black",
-	# 		fill="red",
-	# 		shape=21 # To get the outside border
-	# 	)
-	# })
+	observeEvent(plotly::event_data("plotly_click"), {
+		# "plotly_click" events provide a list of "curveNumber", "pointNumber", "x", and "y"
+		click = plotly::event_data("plotly_click")
+		layer_index = as.numeric(click[1])
+		x = as.numeric(click[3])
+		y = as.numeric(click[4])
+		print(glue::glue("\n[observeEvent] plotly_click: layer_index={layer_index} x={x} y={y}"))
+		source = getLayer(tracker, layer_index)
+		# print(tracker@layer) ### Keep this here for debugging purposes
+		print(glue::glue("\tSelected source: {source}"))
+		index = grab_plot_point(internal@df, x, y)
+		fig = fig + 
+			geom_point(
+				data=internal@df[index,],
+				aes_string(x=selected_x(), y=selected_y(), fill="Source.Name"), 
+				size=2,
+				# label="Selected",
+				colour="black",
+				fill="red",
+				shape=21 # To get the outside border
+			)
+		fig <<- fig
+		# internal <<- addSelection(internal, internal@df[index,])
+	})
 
-	# grab_plot_point = function(data, x, y) {
-	# 	print(paste("Looking for", element_x(), "=", x, "and", element_y(), "=", y))
-	# 	# print(names(data))
-	# 	# temp = data %>% filter(element_x() == x)
-	# 	# print(nrow(filter(data, element_x() > x)))
-	# 	return(which((data[element_x()] == x) & (data[element_y()] == y)))
-	# }
+	grab_plot_point = function(data, x, y) {
+		# print(paste("Looking for", selected_x(), "=", x, "and", selected_y(), "=", y))
+		index = which((data[selected_x()] == x) & (data[selected_y()] == y))
+		# print(index)
+		return(index)
+	}
 
 	### Initialize the plot
 	# 1) 
@@ -229,7 +233,7 @@ server = function(input, output) {
 		country = selected_country()
 		x = selected_x()
 		y = selected_y()
-		print(paste("Initializing the plot for", country))
+		print(glue::glue("\n[reactive] Initializing Plot: {country}"))
 
 		fig = ggplot(data, mapping=aes_string(x=x, y=y, color="Source.Name")) +
 			xlab(names(elements)[elements == x]) +
@@ -249,7 +253,7 @@ server = function(input, output) {
 			)
 
 		for (i in default_sources(country)) {
-			tracker <<- addPathLayer(tracker, i)
+			tracker <<- addPath(tracker, i)
 			df = internal@df %>% 
 				filter(Source.Name == i) %>% 
 				select(ANID, x, y, Source.Name)
@@ -266,77 +270,61 @@ server = function(input, output) {
 
 	toogle_source_points = observeEvent(input$show_source_points, {
 		# print(paste("Toogle source points", input$show_source_points))
+		print(glue::glue("[observeEvent] Toogle Source Points: {input$show_source_points}"))
 		if (input$show_source_points) {
 			for (source in tracker@path) {
-				# print(glue::glue("Adding source points for {source}"))
-				df = internal@df %>% filter(Source.Name == source) %>% select(ANID, internal@x, internal@y, Source.Name)
-				tracker <<- addPointLayer(tracker, source)
-				fig = fig +
-					geom_point(df, 
-						mapping=aes_string(x=internal@x, y=internal@y, color="Source.Name"),
-						size=1.25,
-						inherit.aes=FALSE)
+				add_source_point(source)
 			}
 		} else if (length(tracker@point) > 0) { # Is this check necessary if the list is empty???
 			for (source in tracker@point) {
-				index = getPointIndex(tracker, source)
-
-				# print(glue::glue("Removing source points for {source} at index {index}"))
-				# print(tracker@point)
-
-				tracker <<- removePointLayer(tracker, source)
-				fig = fig %>% ggedit::remove_geom('point', index)
+				remove_source_point(source)
 			}
 		}
 		fig <<- fig
 	})
 
-	# element_plot = reactive({
-	# 	p = fig
+	add_source_point = function(source) {
+		print(glue::glue("Adding source points for {source}"))
+		df = internal@df %>% filter(Source.Name == source) %>% select(ANID, internal@x, internal@y, Source.Name)
+		tracker <<- addPoint(tracker, source)
+		fig = fig +
+			geom_point(df, 
+				mapping=aes_string(x=internal@x, y=internal@y, color="Source.Name"),
+				size=1.25,
+				inherit.aes=FALSE
+			)
+		fig <<- fig
+	}
 
-	# 	# # print(test)
-
-	# 	# # print(paste("Check here:", typeof(fig)))
-	# 	# if (input$show_source_data) {
-	# 	# # 	# p = p + geom_point(mapping=aes(tooltip = tooltip, onclick = "",
-	# 	# # 	# 								data_id = 1:nrow(ellipse)))#, data_id = ANID))
-	# 	# 	p = p + geom_point(size=1)
-	# 	# }
-
-	# 	# # Handle uploaded data if there is any.
-	# 	# print(input$upload_files)
-	# 	# if (length(input$upload_files) > 0) {
-	# 	# 	print("Adding input points")
-	# 	# 	# add_input_points()
-	# 	# 	upload = read.csv(input$upload_files$datapath)
-	# 	# 	upload = select(upload, element_x(), element_y(), "SampleID", "SiteID")
-	# 	# 	# print(names(upload))
-	# 	# 	# cat(element_x(), element_y(), "\n")
-
-	# 	# 	p = p + geom_point(
-	# 	# 		data=upload,
-	# 	# 		mapping=aes_string(x=element_x(), y=element_y(), group="SiteID", color="SiteID"),
-	# 	# 		size=1.1,
-	# 	# 		shape=17,
-	# 	# 		alpha=0.75
-	# 	# 	)
-	# 	# }
-
-	# 	# # cat("\tLength: ", !is.null(input$table_rows_selected), "\n")
-	# 	# if (!is.null(input$table_rows_selected)) {
-	# 	# 	p = p + add_selected_points()	
-	# 	# }
+	# add_source_point_reactive = reactive({
+	# 	print(names(input))
+	# 	add_source_point("test")
 	# })
 
-	observeEvent(initialize_plot(), {
-		print("Plot was initialized!")
-	})
+	remove_source_point = function(source) {
+		index = getPointIndex(tracker, source)
+
+		print(glue::glue("Removing source points for {source} at index {index}"))
+		# print(tracker@point)
+
+		tracker <<- removePoint(tracker, source)
+		fig = fig %>% ggedit::remove_geom('point', index)
+		fig <<- fig
+	}
+
+	# observeEvent(initialize_plot(), {
+	# 	print("Plot was initialized!")
+	# })
 
 	updatePlot = observeEvent(c(
 			initialize_plot(),
 			selected_sources(),
-			input$show_source_points
+			input$show_source_points,
+			plotly::event_data("plotly_click"),
+			input$table_rows_selected,
+			add_source_point_reactive()
 		), {
+			print(glue::glue("[observeEvent] Update Plot"))
 			output$plot = plotly::renderPlotly({
 				# cat("---renderPlotly\n")
 				# print(fig$data)
@@ -382,41 +370,35 @@ server = function(input, output) {
 	### https://shiny.rstudio.com/articles/datatables.html
 	### https://rstudio.github.io/DT/shiny.html
 	## DT::renderDataTable() takes an expression that returns a rectangular data object with column names, such as a data frame or a matrix.
+	# updatePlot = observeEvent(c(
+	# 	plotly::event_data("plotly_click")
+	# ), {
 	output$table <- DT::renderDT({
 		# print("Running 'renderDataTable()'.")
-		# data = get_data()
-		# print(typeof(iris))
-		# print(typeof(data))
-		# data
 		if (!is.null(input$file1)) {
 			# print("     Uploaded file!")
 			# print(input$file1)
-			# tab = read.csv("data/obsidian-NAA-database.csv")
-			tab = internal_df()
-			# tab
+			tab = internal@df
 		} else {
 			# print("     No uploaded file...")
-			# tab = data.frame(Sample=character(),
-				# stringsAsFactors=FALSE)
 			tab = internal@df
 		}
 
 		tab = tab %>% select(ANID, Source.Name, input$element1, input$element2, NKT_edits)
 
-		# cat("Selected data:")
-		# print(input$table_cell_clicked)
-		# print(output)
-
 		DT::datatable(tab,
 			class="compact hover cell-border",
 			rownames=FALSE,
 			# filter="top",
-			extensions="FixedHeader", # https://rstudio.github.io/DT/extensions.html#fixedheader
+			extensions=c("FixedHeader", "Scroller"), # https://rstudio.github.io/DT/extensions.html#fixedheader
 			options=list(
 				dom='fti',
 				columnDefs=list(list(
 					className="dt-center", targets="_all"
 				)),
+				scrollX=TRUE,
+				scrollY=360,
+				paging=FALSE,
 				pageLength=-1,
 				### 'fixedHeader' is not working and is likely a bug
 				### https://github.com/rstudio/DT/issues/389
@@ -425,7 +407,34 @@ server = function(input, output) {
 			editable=TRUE
 		)
 	})
+	# })
 
+	observeEvent(input$table_rows_selected, {
+		### This makes the table reactive to points being selected
+		selection = input$table_rows_selected
+		data = internal@df %>% ungroup()
+
+		selected_data = data %>% filter(row_number() %in% selection) %>% select("ANID", internal@x, internal@y, "Source.Name")
+		print("")
+		# print(select(selected_data, "ANID", internal@x, internal@y, "Source.Name"))
+		# print(typeof(selected_data))
+		print(selected_data)
+		# if (length(selection) > 0) {
+		# 	print(data[selection,])
+		# 	print(" ")
+		# }
+		fig = fig + 
+			geom_point(
+				data=selected_data,
+				aes_string(x=selected_x(), y=selected_y(), fill="Source.Name"), 
+				size=2,
+				label="Selected",
+				colour="black",
+				fill="red",
+				shape=21 # To get the outside border
+			)
+		fig <<- fig
+	})
 
 }
 
