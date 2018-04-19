@@ -259,22 +259,12 @@ server = function(input, output) {
 		return(internal@x)
 	})
 
-	# check_x = observeEvent(selected_x(), { ### This could be redundant now?
-	# 	# print("New selection: x")
-	# 	internal <<- setx(internal, selected_x())
-	# })
-
 	selected_y = reactive({
 		print(paste("CHECK HERE:", input$element2, elements[input$element2]))
 		internal <<- sety(internal, as.character(elements[input$element2]))
 		print(glue::glue("[reactive] Updating y: {internal@y}"))
 		return(internal@y)
 	})
-
-	# check_y = observeEvent(selected_y(), { ### This could be redundant now?
-	# 	# print("New selection: y")
-	# 	internal <<- sety(internal, selected_y())
-	# })
 
 	# add_selected_points = reactive({
 	# 	print("Adding")
@@ -355,54 +345,40 @@ server = function(input, output) {
 	# 	return(index)
 	# }
 
-	# toogle_source_points = observeEvent(input$show_source_points, {
-	# 	print(glue::glue("[observeEvent] Toogle Source Points: {input$show_source_points}"))
-	# 	if (input$show_source_points) {
-	# 		for (source in fig@path) {
-	# 			print(getPointIndex(fig, source))
-	# 			if (is.na(getPointIndex(fig, source))) {
-	# 				print(glue::glue("\t[toggle] Adding {source}"))
-	# 				fig <<- add_source_point(source, internal, fig)
-	# 			}
-	# 		}
-	# 	} else { # Is this check necessary if the list is empty???
-	# 		for (source in fig@point) {
-	# 			print(getPointIndex(fig, source))
-	# 			if (!is.na(getPointIndex(fig, source))) {
-	# 				print(glue::glue("\t[toggle] Removing {source}"))
-	# 				fig <<- remove_source_point(source, fig)
-	# 			}
-	# 		}
-	# 	}
-	# })
+	toogle_source_points = observeEvent(input$show_source_points, {
+		print(glue::glue("[observeEvent] Toogle Source Points: {input$show_source_points}"))
+		if (input$show_source_points) {
+			for (source in fig@path) {
+				print(glue::glue("\t[toggle] Adding {source}"))
+				fig <<- add_source_point(source, internal, fig)
+			}
+		} else {
+			for (source in fig@point) {
+				print(glue::glue("\t[toggle] Removing {source}"))
+				fig <<- remove_source_point(source, fig)
+			}
+		}
+	})
 
 	updatePlot = observeEvent(c(
 			selected_country(),
 			selected_sources(),
 			selected_x(),
-			selected_y()
-			# input$show_source_points,
+			selected_y(),
+			input$show_source_points
 			# plotly::event_data("plotly_click"),
 			# input$table_rows_selected
 		), {
 			print(glue::glue("[observeEvent] Update Plot"))
 			output$plot = plotly::renderPlotly({
-				# cat("---renderPlotly\n")
-				# print(fig@plot$data)
-				# # initialize_plot()
-				# print(typeof(fig@plot))
-				# print(as(fig@plot, "gg"))
-				# print(fig@plot)
-				# test = ggplot(data, mapping=aes_string(x="Rb", y="Mn", colour="Source.Name"))
-				# print(typeof(test))
-				# print(str(fig@plot))
-				# print(str(test))
+
 				result(fig)
 				fig@plot$labels$colour = NULL ### Removes the legend title!
+
+				# print(str(fig@plot))
+
 				pfig = plotly::ggplotly(fig@plot,
-						# tooltip=c(element_x(), element_y(), "label")
-						# tooltip=c(internal@x, internal@y)
-						tooltip=c("x", "y")
+						tooltip=c("ANID", "x", "y")
 					) %>%
 					plotly::layout(
 						margin=list(t=50),
@@ -416,10 +392,19 @@ server = function(input, output) {
 					) #%>%
 					# plotly::config@plot(displayModeBar = FALSE)
 
-				# print(str(pfig@plot$x$data))
+				# print(str(pfig))
 
-				# print(length(selected_sources()))
-				# print(fig@plot$hoverinfo)
+				### Remove the tooltips of the source ellipses from the plotly object 'pfig'
+				for (source in fig@path) {
+					index = getLayerIndex(fig, paste(source, "path"))
+					pfig$x$data[[index]]$hoverinfo = "none"
+				}
+				if (!input$show_source_info) {
+					for (source in fig@point) {
+						index = getLayerIndex(fig, paste(source, "point"))
+						pfig$x$data[[index]]$hoverinfo = "none"
+					}
+				}
 				
 				### Loops through the currently selected sources and removes their 'tooltip'
 				### '$x$data[[i]' is split into lists of the assigned 'groups'

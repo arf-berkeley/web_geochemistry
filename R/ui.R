@@ -106,6 +106,9 @@ fixedPage(
 			shinyBS::bsCollapsePanel(title="Options", style="info",
 				checkboxInput(inputId='show_source_points',
 					label="Show source datapoints",
+					value=FALSE),
+				checkboxInput(inputId='show_source_info',
+					label="Show source information",
 					value=FALSE)
 
 				# checkboxInput(inputId='plot_artifact_points',
