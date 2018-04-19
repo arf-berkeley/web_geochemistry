@@ -149,7 +149,6 @@ setGeneric(name="setx",
 setMethod(f="setx",
 	signature="DynamicData",
 	definition=function(self, x){
-		print(paste("Check here:", x))
 		self@x = x
 		return(self)
 	}
@@ -297,13 +296,17 @@ setGeneric(name="addPoint", function(self, element, id) {
 })
 
 #' @describeIn DynamicPlot Add 'point' layer
-setMethod(f="addPoint", signature="DynamicPlot", function(self, element, id){
-	### Add the new point element to the plot
-	self@plot = self@plot %+% element
+setMethod(f="addPoint", signature="DynamicPlot", function(self, element, id) {
+	if (is.na(getPointIndex(self, id))) {
+		### Add the new point element to the plot
+		self@plot = self@plot %+% element
 
-	### Append the layer id to the point and layer lists
-	self@point = c(self@point, id)
-	self = addLayer(self, id, "point")
+		### Append the layer id to the point and layer lists
+		self@point = c(self@point, id)
+		self = addLayer(self, id, "point")
+	} else {
+		print(glue::glue("[WARN] <{id}> 'point' already present"))
+	}
 	return(self)
 })
 
@@ -313,12 +316,17 @@ setGeneric(name="addPath", function(self, element, id) {
 })
 
 #' @describeIn DynamicPlot Add 'path' layer
-setMethod(f="addPath", signature="DynamicPlot", function(self, element, id){
-	### Add the new point element to the plot
-	self@plot = self@plot %+% element
+setMethod(f="addPath", signature="DynamicPlot", function(self, element, id) {
+	if (is.na(getPathIndex(self, id))) {
+		### Add the new path element to the plot
+		self@plot = self@plot %+% element
 
-	self@path = c(self@path, id)
-	self = addLayer(self, id, "path")
+		### Append the layer id to the path and layer lists
+		self@path = c(self@path, id)
+		self = addLayer(self, id, "path")
+	} else {
+		print(glue::glue("[WARN] <{id}> 'path' already present"))
+	}
 	return(self)
 })
 
@@ -360,13 +368,17 @@ setGeneric(name="removePoint", function(self, id) {
 
 #' @describeIn DynamicPlot Remove 'point' layer
 setMethod(f="removePoint", signature="DynamicPlot", function(self, id){
-	### Grab the point layer index to remove from the plot
-	index = getPointIndex(fig, id)
-	self@plot = self@plot %>% ggedit::remove_geom("point", index)
+	index = getPointIndex(self, id)
+	if (!is.na(index)) {
+		### Remove the point layer using the index
+		self@plot = self@plot %>% ggedit::remove_geom("point", index)
 
-	### Remove the layer id from the point and layer lists
-	self@point = self@point[!(self@point == id)]
-	self = removeLayer(self, id, "point")
+		### Remove the layer id from the point and layer lists
+		self@point = self@point[!(self@point == id)]
+		self = removeLayer(self, id, "point")
+	} else {
+		print(glue::glue("[WARN] <{id}> 'point' not present"))
+	}
 	return(self)
 })
 
@@ -377,13 +389,17 @@ setGeneric(name="removePath", function(self, id) {
 
 #' @describeIn DynamicPlot Remove 'path' layer
 setMethod(f="removePath", signature="DynamicPlot", function(self, id){
-	### Grab the path layer index to remove from the plot
-	index = getPathIndex(fig, id)
-	self@plot = self@plot %>% ggedit::remove_geom("path", index)
+	index = getPathIndex(self, id)
+	if (!is.na(index)) {
+		### Remove the path layer using the index
+		self@plot = self@plot %>% ggedit::remove_geom("path", index)
 
-	### Remove the layer id from the path and layer lists
-	self@path = self@path[!(self@path == id)]
-	self = removeLayer(self, id, "path")
+		### Remove the layer id from the path and layer lists
+		self@path = self@path[!(self@path == id)]
+		self = removeLayer(self, id, "path")
+	} else {
+		print(glue::glue("[WARN] <{id}> 'point' not present"))
+	}
 	return(self)
 })
 
@@ -452,6 +468,7 @@ setGeneric(name="getPathIndex", function(self, id) {
 
 #' @describeIn  getIndex-DynamicPlot Index of 'path' slot
 setMethod(f="getPathIndex", signature="DynamicPlot", function(self, id){
+	index = match(id, self@path)
 	return(match(id, self@path))
 })
 
@@ -461,11 +478,11 @@ setMethod(f="getPathIndex", signature="DynamicPlot", function(self, id){
 ############################################################
 # test = DynamicPlot()
 
-# result = function(self) {
-# 	cat("Points:", paste(self@point, collapse=", "), "\n")
-# 	cat("Paths:", paste(self@path, collapse=", "), "\n")
-# 	cat("Layers:", paste(self@layer, collapse=", "), "\n\n")
-# }
+result = function(self) {
+	cat(glue::glue("Points ({length(self@point)}):"), paste(self@point, collapse=", "), "\n")
+	cat(glue::glue("Paths ({length(self@path)}):"), paste(self@path, collapse=", "), "\n")
+	cat(glue::glue("Layers ({length(self@layer)}):"), paste(self@layer, collapse=", "), "\n\n")
+}
 
 # label = "point1"
 # print(glue::glue("addPoint('{label}')"))
@@ -511,7 +528,6 @@ setMethod(f="getPathIndex", signature="DynamicPlot", function(self, id){
 
 ############################################################
 # Test the plotting functionality of DynamicPlot()
-#	fig@plot$labels$colour = NULL
 ############################################################
 # x = "Rb"
 # y = "Mn"
@@ -559,8 +575,57 @@ setMethod(f="getPathIndex", signature="DynamicPlot", function(self, id){
 # print(fig@plot)
 # result(fig)
 
+# print("Adding 'Alca-3' path")
+# df = data %>% filter(Source.Name == "Alca-3")
+# layer = stat_ellipse(data %>% filter(Source.Name == "Alca-3"),
+# 	mapping=aes_string(x=x, y=y, color="Source.Name"), size=1)
+# fig = addPath(fig, layer, "Alca-3")
+# print(fig@plot)
+# result(fig)
+
+# print("Adding 'Alca-4' path")
+# df = data %>% filter(Source.Name == "Alca-4")
+# layer = stat_ellipse(data %>% filter(Source.Name == "Alca-4"),
+# 	mapping=aes_string(x=x, y=y, color="Source.Name"), size=1)
+# fig = addPath(fig, layer, "Alca-4")
+# print(fig@plot)
+# result(fig)
+
 # print("Removing 'Alca-1' path")
 # fig = removePath(fig, "Alca-1")
 # print(fig@plot)
 # result(fig)
+
+# print("Removing 'Alca-3' path")
+# fig = removePath(fig, "Alca-3")
+# print(fig@plot)
+# result(fig)
+
+# print("Check addPoint() warning")
+# df = data %>% filter(Source.Name == "Alca-1")
+# layer = geom_point(data %>% filter(Source.Name == "Alca-1"),
+# 	mapping=aes_string(x=x, y=y, color="Source.Name"), size=3)
+# fig = addPoint(fig, layer, "Alca-1")
+# print(fig@plot)
+# result(fig)
+
+# print("Check removePoint() warning")
+# fig = removePoint(fig, "Alca-2")
+# print(fig@plot)
+# result(fig)
+
+# print("Check addPath() warning")
+# df = data %>% filter(Source.Name == "Alca-4")
+# layer = stat_ellipse(data %>% filter(Source.Name == "Alca-4"),
+# 	mapping=aes_string(x=x, y=y, color="Source.Name"), size=1)
+# fig = addPath(fig, layer, "Alca-4")
+# print(fig@plot)
+# result(fig)
+
+# print("Check removePath() warning")
+# fig = removePath(fig, "Alca-3")
+# print(fig@plot)
+# result(fig)
+
+# # print(str(fig))
 ############################################################
