@@ -14,7 +14,7 @@ source("dynamic.R")
 #' 
 #' New Details
 #' 
-#' @name SomethingNew
+#' @name Edit
 #' @param source 
 NULL
 
@@ -81,19 +81,12 @@ server = function(input, output) {
 	### Initialize the plot
 	# 1) 
 	initialize_plot = observeEvent(c(
-		input$country,
-		input$element1,
-		input$element2
+		input$country
 	), {
 		country = isolate(selected_country())
 		x = isolate(selected_x())
 		y = isolate(selected_y())
-
-		# for (source in fig@path) {
-		# 	add_source_ellipse(source, internal, fig, plot_points=input$show_source_points)
-		# }
-
-		print(glue::glue("\n[observeEvent] Initializing Plot: {country} ({x},{y})"))
+		print(glue::glue("\n[observeEvent] initialize_plot() - {country} ({x},{y})"))
 
 		layer = ggplot(data, mapping=aes_string(x=x, y=y, color="Source.Name")) +
 			xlab(names(elements)[elements == x]) +
@@ -112,11 +105,47 @@ server = function(input, output) {
 				panel.background = element_blank()
 			)
 		fig <<- initializePlot(fig, layer)
-
+		
 		for (source in default_sources(country)) {
-			print(glue::glue("\tAdding from initialize_plot"))
+			print(glue::glue("\tAdding from initialize_plot()"))
 			fig <<- add_source_ellipse(source, internal, fig, plot_points=input$show_source_points)
 		}
+	})
+
+	update_axes = observeEvent(c(
+		input$element1,
+		input$element2
+	), {
+		country = isolate(selected_country())
+		x = isolate(selected_x())
+		y = isolate(selected_y())
+		print(glue::glue("\n[observeEvent] update_axes() - {country} ({x},{y})"))
+
+		layer = ggplot(data, mapping=aes_string(x=x, y=y, color="Source.Name")) +
+			xlab(names(elements)[elements == x]) +
+			ylab(names(elements)[elements == y]) +
+			# theme_minimal() +
+			# guides(color=guide_legend(nrow=2)) +
+			theme(#plot.background = element_rect(color = "#e3e3e3", fill="#f7f7f7"),
+				# panel.background = element_rect(fill="white"),
+				# legend.position = "bottom",
+				# legend.title = element_blank(),
+				# panel.border = element_rect(fill=NA, colour="#e3e3e3"),
+				axis.line = element_line(colour="black"),
+				panel.grid.major = element_blank(),
+				panel.grid.minor = element_blank(),
+				panel.border = element_blank(),
+				panel.background = element_blank()
+			)
+
+		previous_sources = fig@path
+		fig <<- initializePlot(fig, layer)
+
+		for (source in previous_sources) {
+			print(glue::glue("\tAdding from update_axes()"))
+			fig <<- add_source_ellipse(source, internal, fig, plot_points=input$show_source_points)
+		}
+
 	})
 
 	# state = observe({
@@ -348,7 +377,9 @@ server = function(input, output) {
 
 	updatePlot = observeEvent(c(
 			selected_country(),
-			selected_sources()#,
+			selected_sources(),
+			selected_x(),
+			selected_y()
 			# input$show_source_points,
 			# plotly::event_data("plotly_click"),
 			# input$table_rows_selected

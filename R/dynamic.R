@@ -266,7 +266,7 @@ setMethod(f="initializePlot", signature="DynamicPlot", function(self, layer) {
 	self@path = character()
 	self@layer = character()
 	# self@selection = data.frame()
-	
+
 	### Initialize the ggplot2 object
 	self@plot = layer
 	return(self)
