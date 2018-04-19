@@ -7,5 +7,8 @@ testing/*
 ### Ignore files associated with shinyapps.io
 rsconnect
 
+### Rd2pdf temporary files
+.Rd2pdf*
+
 ### Temporary LibreOffice Calc Files
 .~lock.*
