@@ -261,6 +261,13 @@ setGeneric(name="initializePlot", function(self, layer) {
 
 #' @describeIn DynamicPlot Initialize a ggplot2 object
 setMethod(f="initializePlot", signature="DynamicPlot", function(self, layer) {
+	### Initialize/Reset the lists for tracking 'point', 'path', 'layer', and 'selection'
+	self@point = character()
+	self@path = character()
+	self@layer = character()
+	# self@selection = data.frame()
+	
+	### Initialize the ggplot2 object
 	self@plot = layer
 	return(self)
 })
