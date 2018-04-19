@@ -89,8 +89,8 @@ server = function(input, output) {
 		print(glue::glue("\n[observeEvent] initialize_plot() - {country} ({x},{y})"))
 
 		layer = ggplot(data, mapping=aes_string(x=x, y=y, color="Source.Name")) +
-			xlab(names(elements)[elements == x]) +
-			ylab(names(elements)[elements == y]) +
+			xlab(paste(names(elements)[elements == x], "(ppm)")) +
+			ylab(paste(names(elements)[elements == y], "(ppm)")) +
 			# theme_minimal() +
 			# guides(color=guide_legend(nrow=2)) +
 			theme(#plot.background = element_rect(color = "#e3e3e3", fill="#f7f7f7"),
@@ -122,8 +122,8 @@ server = function(input, output) {
 		print(glue::glue("\n[observeEvent] update_axes() - {country} ({x},{y})"))
 
 		layer = ggplot(data, mapping=aes_string(x=x, y=y, color="Source.Name")) +
-			xlab(names(elements)[elements == x]) +
-			ylab(names(elements)[elements == y]) +
+			xlab(paste(names(elements)[elements == x], "(ppm)")) +
+			ylab(paste(names(elements)[elements == y], "(ppm)")) +
 			# theme_minimal() +
 			# guides(color=guide_legend(nrow=2)) +
 			theme(#plot.background = element_rect(color = "#e3e3e3", fill="#f7f7f7"),
@@ -145,7 +145,6 @@ server = function(input, output) {
 			print(glue::glue("\tAdding from update_axes()"))
 			fig <<- add_source_ellipse(source, internal, fig, plot_points=input$show_source_points)
 		}
-
 	})
 
 	# state = observe({
@@ -254,7 +253,8 @@ server = function(input, output) {
 	})
 
 	selected_x = reactive({
-		internal <<- setx(internal, input$element1)
+		print(paste("CHECK HERE:", input$element1, elements[input$element1]))
+		internal <<- setx(internal, as.character(elements[input$element1]))
 		print(glue::glue("[reactive] Updating x: {internal@x}"))
 		return(internal@x)
 	})
@@ -265,7 +265,8 @@ server = function(input, output) {
 	# })
 
 	selected_y = reactive({
-		internal <<- sety(internal, input$element2)
+		print(paste("CHECK HERE:", input$element2, elements[input$element2]))
+		internal <<- sety(internal, as.character(elements[input$element2]))
 		print(glue::glue("[reactive] Updating y: {internal@y}"))
 		return(internal@y)
 	})

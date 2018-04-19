@@ -3,26 +3,13 @@ print("Running 'config.R'.")
 # library("readxl")
 library("dplyr")
 
-# Ba	La	Lu	Nd	Sm	U	Yb	Ce	Co	Cs	Eu	Fe	Hf	Rb	Sb	Sc	Sr	Ta	Tb	Th	Zn	Zr	Br	Al	Cl	Dy	K	Mn	Na
-elements = list("Manganese (ppm)" = "Mn",
-                "Iron (ppm)" = "Fe",
-                "Niobium (ppm)" = "Nb",
-                "Rubidium (ppm)" = "Rb",
-                "Strontium (ppm)" = "Sr",
-                "Yttrium (ppm)" = "Y",
-                #"Zinc (zn)"="Zn")
-                "Zirconium (ppm)" = "Zr")
-
-# source_data = function() {
-#   data = readxl::read_excel("data/Obsidian_NAA_S-America_MURR2015.xlsx", 3)
-
-#   data = as.data.frame(data)
-
-#   # Replace spaces with underscores in column names.
-#   colnames(data) = sub(" ", "_", colnames(data))
-
-#   data
-# }
+elements = list("Barium"="Ba", "Lanthanum"="La", "Lutetium"="Lu", "Neodynium"="Nd",
+	"Samarium"="Sm", "Uranium"="U", "Ytterbium"="Yb", "Cerium"="Ce",
+	"Cobalt"="Co", "Caesium"="Cs", "Europium"="Eu", "Iron"="Fe",
+	"Hafnium"="Hf", "Rubidium"="Rb", "Antimony"="Sb", "Scandium"="Sc", 
+	"Strontium"="Sr", "Tantalum"="Ta", "Terbium"="Tb", "Thorium"="Th",
+	"Zinc"="Zn", "Zirconium"="Zr", "Aluminium"="Al", "Chlorine"="Cl",
+	"Dysprosium"="Dy", "Potassium"="K", "Manganese"="Mn", "Sodium"="Na")
 
 # my_border_color="#E2E2E2"
 my_border_color="#BCE8F1" # From shinyBS 'primary'

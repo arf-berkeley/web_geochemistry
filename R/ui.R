@@ -31,8 +31,7 @@ fixedPage(
 				selectInput(inputId='country',
 					label='Country (# Sources)',
 					choices=country_labels,
-					# selected=country_labels[0]
-					selected="Peru (40)"
+					selected=country_labels[6] ### Peru
 				),
 
 				shinyBS::bsCollapse(id="sources",
@@ -49,14 +48,14 @@ fixedPage(
 				### Selection for dependent variables
 				selectInput(inputId='element1',
 					label='Horizontal element (X)',
-					choices=elements,
-					selected="Rb"
+					choices=sort(names(elements)),
+					selected="Rubidium"
 				),
 
 				selectInput(inputId='element2',
 					label='Vertical element (Y)',
-					choices=elements,
-					selected="Sr"
+					choices=sort(names(elements)),
+					selected="Strontium"
 				)
 			),
 
