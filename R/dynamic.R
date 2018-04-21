@@ -20,7 +20,9 @@ DynamicData = setClass("DynamicData",
 		sources="character",
 		last_source="character",
 		x="character",
-		y="character"
+		y="character",
+		selection="data.frame",
+		files="data.frame"
 	),
 	prototype=list(
 		df=data.frame(),
@@ -28,7 +30,9 @@ DynamicData = setClass("DynamicData",
 		sources=c(),
 		last_source="",
 		x="",
-		y=""
+		y="",
+		selection=data.frame(),
+		files=data.frame(name=character(), path=character(), type=character(), show=logical())
 	)#,
 	# validity=function(self) {
 	# 	if (!(self@country %in% source_countries)) {
@@ -37,6 +41,16 @@ DynamicData = setClass("DynamicData",
 
 	# }
 )
+
+
+setGeneric(name="addFiles", function(self, df) {
+	standardGeneric("addFiles")
+})
+
+setMethod(f="addFiles", signature="DynamicData", function(self, df) {
+	self@files = rbind(self@files, df)
+	return(self)
+})
 
 
 ###########################################################
@@ -168,20 +182,80 @@ setMethod(f="sety",
 	}
 )
 
-setGeneric(name="addSelection",
-	def=function(self, row) {
-		standardGeneric("addSelection")
-	}
-)
+setGeneric(name="addSelection", function(self, row) {
+	standardGeneric("addSelection")
+})
 
-setMethod(f="addSelection",
-	signature="DynamicData",
-	definition=function(self, row){
-		self@selection = rbind(self@selection, row)
-		print(nrow(self@selection))
-		return(self)
+setMethod(f="addSelection", signature="DynamicData", function(self, row){
+	self@selection = rbind(self@selection, row)
+	# print(nrow(self@selection))
+	return(self)
+})
+
+setGeneric(name="removeSelection", function(self, row) {
+	standardGeneric("removeSelection")
+})
+
+setMethod(f="removeSelection", signature="DynamicData", function(self, row){
+	index = getSelectionIndex(self, row)
+	if (!is.na(index)) {
+		self@selection = self@selection[-index,]
+		rownames(self@selection) = NULL ### Re-indexes the rows after removing one
+	} else {
+		print(glue::glue("[WARN] <row> not present in selection"))
 	}
-)
+	return(self)
+})
+
+setGeneric(name="getSelectionIndex", function(self, row) {
+	standardGeneric("getSelectionIndex")
+})
+
+setMethod(f="getSelectionIndex", signature="DynamicData", function(self, row){
+	return(prodlim::row.match(row, self@selection, nomatch=NA))
+})
+
+
+############################################################
+# Test 'selection' functionality of DynamicData()
+############################################################
+# cat("-- Testing 'selection' functionality of DynamicData() --\n\n")
+# test = DynamicData()
+# cat("Adding 'First' row\n")
+# first = data.frame(name="First", type="Point")
+# test = addSelection(test, first)
+# print(test@selection)
+
+# cat("\nAdding 'Second' row\n")
+# second = data.frame(name="Second", type="Path")
+# test = addSelection(test, second)
+# print(test@selection)
+
+# cat("\nAdding 'Third' row\n")
+# third = data.frame(name="Third", type="Path")
+# test = addSelection(test, third)
+# print(test@selection)
+
+# cat("\nGetting index of 'Second' row\n")
+# index = getSelectionIndex(test, second)
+# print(glue::glue("{index} (should be 2)"))
+
+# cat("\nRemoving 'Second' row\n")
+# test = removeSelection(test, second)
+# print(test@selection)
+
+# cat("\nGetting index of 'Second' row\n")
+# index = getSelectionIndex(test, second)
+# print(glue::glue("{index} (should be NA)"))
+
+# cat("\nRemoving 'Second' row, again (should throw a warning, but no error)\n")
+# test = removeSelection(test, second)
+# print(test@selection)
+
+# cat("\nGetting index of 'Third' row\n")
+# index = getSelectionIndex(test, third)
+# print(glue::glue("{index} (should be 2)"))
+############################################################
 
 
 # print(typeof(c("Alca-1", "Chivay", "Puzolana")))
@@ -235,8 +309,7 @@ DynamicPlot = setClass("DynamicPlot",
 		plot="gg",
 		point="character",
 		path="character",
-		layer="character",
-		selection="data.frame"
+		layer="character"
 	)
 )
 ############################################################
@@ -475,7 +548,6 @@ setGeneric(name="getPathIndex", function(self, id) {
 
 #' @describeIn  getIndex-DynamicPlot Index of 'path' slot
 setMethod(f="getPathIndex", signature="DynamicPlot", function(self, id){
-	index = match(id, self@path)
 	return(match(id, self@path))
 })
 
