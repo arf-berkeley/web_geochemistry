@@ -8,9 +8,26 @@
 	vertical-align: super;
 }
 
-.btn {
+.my-btn {
 	padding: 5px;
 	vertical-align: center;
+	margin-top: 5px;
+	margin-bottom: 5px;
+}
+
+.my-selection {
+	padding: 0px;
+}
+
+.my-checkbox {
+	margin-top: 0px;
+	margin-bottom: 2px;
+}
+
+#clear_selected {
+	padding: 5px;
+	vertical-align: center;
+	margin-top: 5px;
 }
 
 /* Controls the properties for almost all Shiny widgets */
@@ -27,13 +44,14 @@
 div.dataTables_wrapper {
 	width: 100%;
 	margin: 0 auto;
-	margin-top: 25px;
+	/*margin-top: 25px;*/
 	height: 450px;
 	/*height: 400px;*/
 	/*overflow-y: scroll;
 	overflow-x: scroll;*/
 	/*border: 2px solid #BCE8F1;
 	border-radius:5px;*/
+	/*dom: '<"wrapper"flipt>';*/
 }
 
 /*div {

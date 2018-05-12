@@ -1,20 +1,10 @@
-### Dependencies:
-### 	shiny, readxl, glue, shinyBS, plotly, dplyr, DT
-### Install all of these using:
-### 	install.packages(c("shiny", "readxl", "glue", "shinyBS", "plotly", "dplyr", "DT"))
-
-print("")
-print("")
-print("Beginning new interation...")
-print("Running 'ui.R'.")
-
-library("shiny")
-# library("DT")
-
-source("config.R")
+print(glue("--ui.R"))
 
 fixedPage(
 	includeCSS("styles.css"),
+	shinyjs::useShinyjs(),
+	shinyjs::extendShinyjs(script="interactive.js"),
+	# shinyjs::extendShinyjs(text="jsCode"),
 	titlePanel("Geochemical Visualization – South America"),
 
 	column(3,
@@ -31,7 +21,7 @@ fixedPage(
 				selectInput(inputId='country',
 					label='Country (# Sources)',
 					choices=country_labels,
-					selected=country_labels[6] ### Peru
+					selected=country_labels[0] ### Peru
 				),
 
 				shinyBS::bsCollapse(id="sources",
@@ -60,13 +50,14 @@ fixedPage(
 			),
 
 			shinyBS::bsCollapsePanel(title="File Management", style="info",
-				tags$b("Upload source or artifact data"),
+				tags$b("Upload data"),
 				tags$div(class="my-center",
-					radioButtons(inputId='upload_format_type',
-						label=NA,
-						choices=list("Source", "Artifact"),
-						inline=TRUE
-					),
+					actionButton("view_uploaded_files", "View uploaded files", class="my-btn"),
+					# radioButtons(inputId='upload_format_type',
+					# 	label=NA,
+					# 	choices=list("Source", "Artifact"),
+					# 	inline=TRUE
+					# ),
 					fileInput(inputId='upload_files',
 						label=NULL,
 						multiple=TRUE,
@@ -77,30 +68,46 @@ fixedPage(
 					)
 				),
 
-				tags$div(style="margin-bottom:16px;",
-					conditionalPanel(
-						# condition="typeof input.upload_files == 'object'",
-						condition='typeof input["upload_files"] == "object"',
-						# condition="input.upload_format_type == 'Source'",
-						# condition='output["test"]',
-						# 'true',
-						shinyBS::bsCollapsePanel(title="View uploaded files", style="default",
-							"Uploaded files go here!"
+				# tags$div(style="margin-bottom:16px;",
+				# 	conditionalPanel(
+				# 		# condition="typeof input.upload_files == 'object'",
+				# 		condition='typeof input["upload_files"] == "object"',
+				# 		# condition="input.upload_format_type == 'Source'",
+				# 		# condition='output["test"]',
+				# 		# 'true',
+				# 		# shinyBS::bsCollapsePanel(title="View uploaded files", style="default",
+				# 		# 	"Uploaded files go here!"
+				# 		# )
+				# 		actionButton("view_uploaded_files", "View uploaded files")
+				# 	)
+				# ),
+
+				tags$b("Download updated data"),
+				# tags$div(class="my-center",
+				fixedRow(
+					column(7,
+						tags$div(#sytle="display: inline-block;vertical-align:top",
+							# radioButtons(inputId='output_selection',
+							# 	label=NA,
+							# 	choices=list("CSV", "XLSX", "ODS"),
+							# 	inline=TRUE
+							# ),
+							downloadButton(outputId='x3',
+								label="Download", class="my-btn"
+							)
+						)
+					),
+					column(5,
+						tags$div(#sytle="display: inline-block;vertical-align:top",
+							selectInput(inputId="output_selection",
+								label=NA,
+								choices=c("CSV", "XLSX", "ODS"),
+								width="85px",
+							)
 						)
 					)
-				),
-
-				tags$b("Download updated table"),
-				tags$div(class="my-center",
-					radioButtons(inputId='output_selection',
-						label=NA,
-						choices=list("CSV", "XLSX", "ODS"),
-						inline=TRUE
-					),
-					downloadButton(outputId='x3',
-						label="Download"
-					)
 				)
+				# )
 			),
 
 			shinyBS::bsCollapsePanel(title="Options", style="info",
@@ -126,13 +133,15 @@ fixedPage(
 
 	column(9, #style="background-color:#F0F8FF;border:1px solid #A9A9A9;",
 		fixedRow(plotly::plotlyOutput("plot", height="350px", width="auto")),
-		# renderText("Hello World.")
 		### Controlling the style using 'div.dataTables_wrapper' in 'styles.css'
 		# shinyBS::bsCollapse(id="table_panel",
 		# 	shinyBS::bsCollapsePanel(title="View table", style="info",
 		# 		fixedRow(DT::DTOutput("table"))
 		# 	)
 		# )
-		fixedRow(DT::DTOutput("table"))
+		fixedRow(DT::DTOutput("table")),
+		# tags$div(#id="mine", style="border: 1px solid black;width:200px;",
+		actionButton("clear_selected", "Clear selected")
+		# ),
 	)
 )

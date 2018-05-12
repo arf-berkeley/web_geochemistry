@@ -1,7 +1,4 @@
-library("dplyr")
-### Example of '%>%' usage: http://genomicsclass.github.io/book/pages/dplyr_tutorial.html#pipe-operator-
-
-### Requires: 'config.R', but its already loaded by 'ui.R'
+source("config.R")
 data = read.csv("data/obsidian-NAA-database.csv")
 
 ###########################################################
@@ -48,6 +45,7 @@ setGeneric(name="addFiles", function(self, df) {
 })
 
 setMethod(f="addFiles", signature="DynamicData", function(self, df) {
+	print(glue("Adding {nrow(df)} new files"))
 	self@files = rbind(self@files, df)
 	return(self)
 })
@@ -90,6 +88,7 @@ setMethod(f="setCountry",
 	definition=function(self, country) {
 		self@country = country
 		self@df = data %>% filter(Site.Country == self@country)
+		self@selection = data.frame()
 		return(self)
 	}
 )
@@ -213,6 +212,15 @@ setGeneric(name="getSelectionIndex", function(self, row) {
 
 setMethod(f="getSelectionIndex", signature="DynamicData", function(self, row){
 	return(prodlim::row.match(row, self@selection, nomatch=NA))
+})
+
+setGeneric(name="clearSelection", function(self) {
+	standardGeneric("clearSelection")
+})
+
+setMethod(f="clearSelection", signature="DynamicData", function(self){
+	self@selection = data.frame()
+	return(self)
 })
 
 

@@ -1,13 +1,5 @@
 cat("\n\n--server.R\n")
 
-# library("dplyr")
-library("ggplot2")
-
-### No need because both are already in 'ui.R', which is loaded first
-# library("shiny") 
-# source("config@plot.R") ### Requires: 'config@plot.R', but its already loaded by 'ui.R'
-source("dynamic.R")
-
 #' New Title
 #' 
 #' New Description
@@ -20,7 +12,7 @@ NULL
 
 #' @describeIn SomethingNew Add the source ellipse
 add_source_ellipse = function(source, data, plot, plot_points=FALSE) {
-	print(glue::glue("\t[add_source_ellipse()] Add source ellipse {source}"))
+	# print(glue("\t[add_source_ellipse()] Add source ellipse {source}"))
 	df = data@df %>% 
 		filter(Source.Name == source) %>% 
 		select(ANID, data@x, data@y, Source.Name)
@@ -31,7 +23,7 @@ add_source_ellipse = function(source, data, plot, plot_points=FALSE) {
 	plot = addPath(plot, layer, source)
 
 	if (plot_points) {
-		print(glue::glue("\t[add_source_ellipse()] Calling add_source_point() for {source}"))
+		# print(glue("\t[add_source_ellipse()] Calling add_source_point() for {source}"))
 		plot = add_source_point(source, data, plot)
 	}
 
@@ -40,17 +32,17 @@ add_source_ellipse = function(source, data, plot, plot_points=FALSE) {
 
 #' @describeIn SomethingNew Remove the source ellipse
 remove_source_ellipse = function(source, plot) {
-	print(glue::glue("\t[remove_source_ellipse()] Remove source ellipse {source}"))
+	# print(glue("\t[remove_source_ellipse()] Remove source ellipse {source}"))
 	plot = removePath(plot, source)
 
-	print(glue::glue("\t[remove_source_ellipse()] Calling remove_source_point() for {source}"))
+	# print(glue("\t[remove_source_ellipse()] Calling remove_source_point() for {source}"))
 	plot = remove_source_point(source, plot)
 	return(plot)
 }
 
 #' @describeIn SomethingNew Add the source points
 add_source_point = function(source, data, plot) {
-	print(glue::glue("\t[add_source_point()] Add source points {source}"))
+	# print(glue("\t[add_source_point()] Add source points {source}"))
 
 	df = data@df %>%
 		filter(Source.Name == source) %>%
@@ -68,12 +60,29 @@ add_source_point = function(source, data, plot) {
 
 #' @describeIn SomethingNew Remove the source points
 remove_source_point = function(source, plot) {
-	print(glue::glue("\t[remove_source_point()] Remove source points {source}"))
+	# print(glue("\t[remove_source_point()] Remove source points {source}"))
 	plot = removePoint(plot, source)
 	return(plot)
 }
 
+add_selected_points = function(data, plot) {
+	layer = geom_point(data@selection,
+			mapping=aes_string(x=data@x, y=data@y, fill="Source.Name"), 
+			size=2,
+			# label="Selected",
+			colour="black",
+			fill="red",
+			shape=21 # To get the outside border
+		)
+	plot = addPoint(plot, layer, "selection")
+	return(plot)
+}
+
+
+
+
 server = function(input, output) {
+	shinyjs::showLog()
 
 	internal = DynamicData()
 	fig = DynamicPlot()
@@ -86,7 +95,7 @@ server = function(input, output) {
 		country = isolate(selected_country())
 		x = isolate(selected_x())
 		y = isolate(selected_y())
-		print(glue::glue("\n[observeEvent] initialize_plot() - {country} ({x},{y})"))
+		print(glue("\n[observeEvent] initialize_plot() - {country} ({x},{y})"))
 
 		layer = ggplot(data, mapping=aes_string(x=x, y=y, color="Source.Name")) +
 			xlab(paste(names(elements)[elements == x], "(ppm)")) +
@@ -107,7 +116,7 @@ server = function(input, output) {
 		fig <<- initializePlot(fig, layer)
 		
 		for (source in default_sources(country)) {
-			print(glue::glue("\tAdding from initialize_plot()"))
+			# print(glue("\tAdding from initialize_plot()"))
 			fig <<- add_source_ellipse(source, internal, fig, plot_points=input$show_source_points)
 		}
 	})
@@ -119,7 +128,7 @@ server = function(input, output) {
 		country = isolate(selected_country())
 		x = isolate(selected_x())
 		y = isolate(selected_y())
-		print(glue::glue("\n[observeEvent] update_axes() - {country} ({x},{y})"))
+		print(glue("\n[observeEvent] update_axes() - {country} ({x},{y})"))
 
 		layer = ggplot(data, mapping=aes_string(x=x, y=y, color="Source.Name")) +
 			xlab(paste(names(elements)[elements == x], "(ppm)")) +
@@ -142,7 +151,7 @@ server = function(input, output) {
 		fig <<- initializePlot(fig, layer)
 
 		for (source in previous_sources) {
-			print(glue::glue("\tAdding from update_axes()"))
+			# print(glue("\tAdding from update_axes()"))
 			fig <<- add_source_ellipse(source, internal, fig, plot_points=input$show_source_points)
 		}
 	})
@@ -166,7 +175,7 @@ server = function(input, output) {
 	# #' label = extract_count_label(count_label) # Holds 'Country'
 	selected_country = reactive({
 		internal <<- setCountry(internal, extract_count_label(input$country))
-		print(glue::glue("[reactive] selected_country() - Parsing country input <{internal@country}>"))
+		print(glue("[reactive] selected_country() - Parsing country input <{internal@country}>"))
 		return(internal@country)
 	})
 
@@ -174,7 +183,7 @@ server = function(input, output) {
 	# 1) Sets the internal 'country'
 	# 2) Determines the default 'sources' using 'default_sources()' in 'config@plot.R'
 	check_country = observeEvent(selected_country(), {
-		print(glue::glue("[observeEvent] check_country() - Updating deault sources"))
+		print(glue("[observeEvent] check_country() - Updating deault sources"))
 		internal <<- setSources(internal, default_sources(internal@country))
 		# initialize_plot()
 	})
@@ -186,7 +195,7 @@ server = function(input, output) {
 	# Note: like 'input$country', 'input$selected_source_labels' is of the format 'Source (# Samples)'
 	# 	'vectorof_labels()' is an apply() implementation of 'extract_count_labels()'
 	selected_sources = reactive({
-		print(glue::glue("[reactive] selected_sources() - Parsing source input"))
+		print(glue("[reactive] selected_sources() - Parsing source input"))
 		country = selected_country() # Force update when 'country' is changed
 		if (is.null(input$selected_source_labels)) {
 			return(default_sources(country))
@@ -201,7 +210,7 @@ server = function(input, output) {
 	# 3) Compares these two lists to determine if a source was added or removed
 	# 4) Applies the appropriate method ('addSource' or 'removeSource') to 'internal'
 	check_sources = observeEvent(selected_sources(), {
-		print(glue::glue("[observeEvent] check_sources() - Updating sources"))
+		print(glue("[observeEvent] check_sources() - Updating sources"))
 		before = internal@sources
 		after = selected_sources()
 
@@ -217,26 +226,26 @@ server = function(input, output) {
 		### Four cases occur when selecting from the available sources
 		if ((length(before) == 1) & (identical(default_sources(internal@country), after))) {
 			### 1) The final source is remove (and selected_sources() resets the sources to the default)
-			# print(glue::glue("\tRemoving final source"))
+			# print(glue("\tRemoving final source"))
 			internal <<- removeSource(internal, before)
 			fig <<- remove_source_ellipse(before, fig)
 		} else if ((length(add) > 0)) {
 			### 2) A source is added
 			for (source in add) {
-				# print(glue::glue("\tAdding {source}"))
+				# print(glue("\tAdding {source}"))
 				internal <<- addSource(internal, source)
 				fig <<- add_source_ellipse(source, internal, fig, plot_points=input$show_source_points)
 			}
 		} else if (length(remove) > 0) {
 			### 3) A source is removed
 			for (source in remove) {
-				# print(glue::glue("\tRemoving {source}"))
+				# print(glue("\tRemoving {source}"))
 				internal <<- removeSource(internal, source)
 				fig <<- remove_source_ellipse(source, fig)
 			}
 		} else {
 			### 4) No change to the sources is made (meaning selected_sources() reacted to something extra...)
-			print(glue::glue("\tNo changes to source selection"))
+			# print(glue("\tNo changes to source selection"))
 		}
 	})
 
@@ -253,40 +262,18 @@ server = function(input, output) {
 	})
 
 	selected_x = reactive({
-		print(paste("CHECK HERE:", input$element1, elements[input$element1]))
+		# print(paste("CHECK HERE:", input$element1, elements[input$element1]))
 		internal <<- setx(internal, as.character(elements[input$element1]))
-		print(glue::glue("[reactive] Updating x: {internal@x}"))
+		print(glue("[reactive] selected_x() - Updating x <{internal@x}>"))
 		return(internal@x)
 	})
 
 	selected_y = reactive({
-		print(paste("CHECK HERE:", input$element2, elements[input$element2]))
+		# print(paste("CHECK HERE:", input$element2, elements[input$element2]))
 		internal <<- sety(internal, as.character(elements[input$element2]))
-		print(glue::glue("[reactive] Updating y: {internal@y}"))
+		print(glue("[reactive] selected_y() - Updating y <{internal@y}>"))
 		return(internal@y)
 	})
-
-	# add_selected_points = reactive({
-	# 	print("Adding")
-	# 	fig@plot = fig@plot + 
-	# 		geom_point(
-	# 			data=selected_points(),
-	# 			aes_string(x=element_x(), y=element_y(), fill="Source.Name"), 
-	# 			size=2,
-	# 			label="Selected",
-	# 			colour="black",
-	# 			fill="red",
-	# 			shape=21 # To get the outside border
-	# 		)
-	# 	# scale_fill_manual(name = "", values="black", label="Your Selection")
-	# 	fig@plot <<- fig@plot
-	# })
-
-	# check_input = observe({
-	# 	input$upload_files
-	# 	print(input$upload_files)
-	# 	print(length(input$upload_files))
-	# })
 
 	# add_uploaded_points = reactive({
 	# 	# scale_shape_identity(2)
@@ -313,66 +300,197 @@ server = function(input, output) {
 	# 	# }
 	# })
 
-	# observeEvent(plotly::event_data("plotly_click"), {
+
+
+
+	# 'function() {
+	# 		# $(this.api().table().row(20).node()).addClass("selected");
+	# 		# this.api().table().row(20).scrollTo();
+	# 		alert("scrolled");}'
+
+	# observeEvent(c(
+	# 	input$table_rows_selected,
+	# 	plotly::event_data("plotly_click")
+	# ), {
+	# 	observe({
+	# 		print("Table row selected...")
+	# 		input$table_rows_selected
+	# 	})
+
+	# 	observe({
+	# 		print("Plot point selected...")
+	# 		plotly::event_data("plotly_click")
+	# 	})
 	# 	# "plotly_click" events provide a list of "curveNumber", "pointNumber", "x", and "y"
 	# 	click = plotly::event_data("plotly_click")
 	# 	layer_index = as.numeric(click[1])
 	# 	x = as.numeric(click[3])
 	# 	y = as.numeric(click[4])
-	# 	print(glue::glue("\n[observeEvent] plotly_click: layer_index={layer_index} x={x} y={y}"))
+	# 	print(glue("\n[observeEvent] plotly_click: layer_index={layer_index} x={x} y={y}"))
 	# 	source = getLayer(fig, layer_index) ### Stores 'source' with "point" or "path" appended to it
-	# 	print(fig@layer) ### Keep this here for debugging purposes
-	# 	print(glue::glue("\tSelected source: {source}"))
+	# 	# print(fig@layer) ### Keep this here for debugging purposes
+	# 	# print(glue("\tSelected source: {source}"))
 	# 	index = grab_plot_point(internal@df, x, y)
-	# 	fig@plot = fig@plot + 
-	# 		geom_point(
-	# 			data=internal@df[index,],
-	# 			aes_string(x=selected_x(), y=selected_y(), fill="Source.Name"), 
-	# 			size=2,
-	# 			# label="Selected",
-	# 			colour="black",
-	# 			fill="red",
-	# 			shape=21 # To get the outside border
-	# 		)
-	# 	fig@plot <<- fig@plot
-	# 	# internal <<- addSelection(internal, internal@df[index,])
+	# 	# fig@plot = fig@plot + 
+	# 	# 	geom_point(
+	# 	# 		data=internal@df[index,],
+	# 	# 		aes_string(x=selected_x(), y=selected_y(), fill="Source.Name"), 
+	# 	# 		size=2,
+	# 	# 		# label="Selected",
+	# 	# 		colour="black",
+	# 	# 		fill="red",
+	# 	# 		shape=21 # To get the outside border
+	# 	# 	)
+	# 	# fig@plot <<- fig@plot
+
+	# 	source = gsub("(.*)\\s\\w+", "\\1", source)
+	# 	# selection = internal@df %>% filter(Source.Name == source) %>% filter(internal@x == x)
+	# 	# print(selection)
+	# 	# print(internal@df[index,])
+	# 	selection = internal@df[index,]
+	# 	internal_index = getSelectionIndex(internal, selection)
 	# })
 
-	# grab_plot_point = function(data, x, y) {
-	# 	# print(paste("Looking for", selected_x(), "=", x, "and", selected_y(), "=", y))
-	# 	index = which((data[selected_x()] == x) & (data[selected_y()] == y))
-	# 	# print(index)
-	# 	return(index)
+	observeEvent(input$table_rows_selected, {
+		# shinyjs::js$selected(1)
+		shinyjs::js$selected()
+		print(glue("\n[observeEvent] table_rows_selected"))
+		### This makes the table reactive to points being selected
+		# previous_selection = internal@selection
+		# current_indicies = input$table_rows_selected
+		# current_selection = internal@df %>% filter(row_number() %in% current_indicies)
+		# data = internal@df %>% ungroup()
+		# previous_indicies = getSelectionIndex(internal, input$table_rows_selected)
+		# print(previous_selection %>% select("ANID", internal@x, internal@y))
+		# print("")
+		# print(current_selection %>% select("ANID", internal@x, internal@y))
+		# print(previous_indicies)
+
+		# new_selection = previous_selection@selection[-index,]
+
+		# selected_data = data %>% filter(row_number() %in% selection)
+		# internal <<- addSelection(internal, selected_data)
+	})
+
+	observeEvent(input$table_selection, {
+		row = input$table_selection
+		# print(glue("\t<{typeof(row)}> {row}"))
+		selected = data %>% filter(ANID == row[1])
+		internal <<- addSelection(internal, selected)
+	})
+
+	observeEvent(input$clear_selected, {
+		internal <<- clearSelection(internal)
+		proxy %>% DT::selectRows(which(internal@df$ANID %in% internal@selection$ANID))
+	})
+
+	# table_selected = reactive({
+	# 	test = input$table_selection
+	# 	return(test)
+	# })
+
+	### "plotly_click" events provide a list of "curveNumber", "pointNumber", "x", and "y"
+	observeEvent(plotly::event_data("plotly_click"), {
+		click = plotly::event_data("plotly_click")
+		layer_index = as.numeric(click[1])
+		x = as.numeric(click[3])
+		y = as.numeric(click[4])
+		print(glue("\n[observeEvent] plotly_click: layer_index={layer_index} x={x} y={y}"))
+
+		index = grab_plot_point(internal@df, x, y)
+		selection = internal@df[index,]
+		# internal <<- adjust_selection(internal, selection)
+		# print(selection)
+
+		internal_index = getSelectionIndex(internal, selection)
+		if (is.na(internal_index)) { ### Point hasn't been selected yet, so add it
+			print(glue("\tAdding new point to selection"))
+			internal <<- addSelection(internal, selection)
+			print(index)
+			### Jump to the new selection using JavaScript in 'interactive.js'
+			proxy %>% DT::selectRows(which(internal@df$ANID %in% internal@selection$ANID))
+			if (index > 3) {
+				shinyjs::js$scroll(index-3)
+			} else {
+				shinyjs::js$scroll(index)
+			}
+		} else { ### Point is already present, so remove it
+			print(glue("\tRemoving point from selection"))
+			internal <<- removeSelection(internal, selection)
+		}
+	})
+
+	# adjust_selection(data, selection) {
+	# 	index = getSelectionIndex(data, selection)
+	# 	if (is.na(index)) { ### Point hasn't been selected yet, so add it
+	# 		print(glue("\tAdding new point to selection"))
+	# 		data <<- addSelection(data, selection)
+
+	# 		### Jump to the new selection using JavaScript in 'interactive.js'
+	# 		proxy %>% DT::selectRows(which(data@df$ANID %in% data@selection$ANID))
+	# 		if (index > 3) {
+	# 			shinyjs::js$scroll(index-3)
+	# 		} else {
+	# 			shinyjs::js$scroll(index)
+	# 		}
+	# 	} else { ### Point is already present, so remove it
+	# 		print(glue("\tRemoving point from selection"))
+	# 		data <<- removeSelection(data, selection)
+	# 	}
+	# 	return(data)
 	# }
 
-	toogle_source_points = observeEvent(input$show_source_points, {
-		print(glue::glue("[observeEvent] Toogle Source Points: {input$show_source_points}"))
+	grab_plot_point = function(data, x, y) {
+		# print(paste("Looking for", selected_x(), "=", x, "and", selected_y(), "=", y))
+		index = which((data[selected_x()] == x) & (data[selected_y()] == y))
+		# print(index)
+		return(index)
+	}
+
+
+
+
+
+	toggle_source_points = observeEvent(input$show_source_points, {
+		print(glue("[observeEvent] toggle_source_points() - Toggle source points <{input$show_source_points}>"))
 		if (input$show_source_points) {
 			for (source in fig@path) {
-				print(glue::glue("\t[toggle] Adding {source}"))
+				# print(glue("\t[toggle] Adding {source}"))
 				fig <<- add_source_point(source, internal, fig)
 			}
 		} else {
 			for (source in fig@point) {
-				print(glue::glue("\t[toggle] Removing {source}"))
+				# print(glue("\t[toggle] Removing {source}"))
 				fig <<- remove_source_point(source, fig)
 			}
 		}
 	})
+
+
+
+
 
 	updatePlot = observeEvent(c(
 			selected_country(),
 			selected_sources(),
 			selected_x(),
 			selected_y(),
-			input$show_source_points
-			# plotly::event_data("plotly_click"),
-			# input$table_rows_selected
+			input$show_source_points,
+			plotly::event_data("plotly_click"),
+			input$table_selection,
+			input$clear_selected
 		), {
-			print(glue::glue("[observeEvent] Update Plot"))
+			print(glue("[observeEvent] Update Plot"))
 			output$plot = plotly::renderPlotly({
+				### Debug the various layers of the ggplot2 object (calling result() from 'dynamic.R')
+				# result(fig)
+				##########
 
-				result(fig)
+				if (length(internal@selection) > 0) {
+					# print(internal@selection %>% select("ANID", internal@x, internal@y))
+					fig = add_selected_points(internal, fig)
+				}
+
 				fig@plot$labels$colour = NULL ### Removes the legend title!
 
 				# print(str(fig@plot))
@@ -423,74 +541,148 @@ server = function(input, output) {
 			})
 	})
 
-	# #### Create the table
-	# ### https://shiny.rstudio.com/articles/datatables.html
-	# ### https://rstudio.github.io/DT/shiny.html
-	# ## DT::renderDataTable() takes an expression that returns a rectangular data object with column names, such as a data frame or a matrix.
-	# # updatePlot = observeEvent(c(
-	# # 	plotly::event_data("plotly_click")
-	# # ), {
-	# output$table <- DT::renderDT({
-	# 	# print("Running 'renderDataTable()'.")
-	# 	if (!is.null(input$file1)) {
-	# 		# print("     Uploaded file!")
-	# 		# print(input$file1)
-	# 		tab = internal@df
-	# 	} else {
-	# 		# print("     No uploaded file...")
-	# 		tab = internal@df
-	# 	}
+	#### Create the table
+	### https://shiny.rstudio.com/articles/datatables.html
+	### https://rstudio.github.io/DT/shiny.html
+	## DT::renderDataTable() takes an expression that returns a rectangular data object with column names, such as a data frame or a matrix.
+	updatePlot = observeEvent(c(
+		selected_country(),
+		selected_x(),
+		selected_y(),
+		selected_sources()
+	), {
+		output$table <- DT::renderDT({
+			# print("Running 'renderDataTable()'.")
+			if (!is.null(input$file1)) {
+				# print("     Uploaded file!")
+				# print(input$file1)
+				tab = internal@df %>% filter(Source.Country == internal@country)
+			} else {
+				# print("     No uploaded file...")
+				tab = internal@df #%>% filter(Source.Country == internal@country)
+			}
 
-	# 	tab = tab %>% select(ANID, Source.Name, input$element1, input$element2, NKT_edits)
+			tab = tab %>% select(ANID, Source.Name, as.character(elements), NKT_edits)
 
-	# 	DT::datatable(tab,
-	# 		class="compact hover cell-border",
-	# 		rownames=FALSE,
-	# 		# filter="top",
-	# 		extensions=c("FixedHeader", "Scroller"), # https://rstudio.github.io/DT/extensions.html#fixedheader
-	# 		options=list(
-	# 			dom='fti',
-	# 			columnDefs=list(list(
-	# 				className="dt-center", targets="_all"
-	# 			)),
-	# 			scrollX=TRUE,
-	# 			scrollY=360,
-	# 			paging=FALSE,
-	# 			pageLength=-1,
-	# 			### 'fixedHeader' is not working and is likely a bug
-	# 			### https://github.com/rstudio/DT/issues/389
-	# 			fixedHeader=TRUE
-	# 		),
-	# 		editable=TRUE
-	# 	)
-	# })
-	# # })
+			DT::datatable(tab,
+				class="compact hover cell-border",
+				colnames=c("ID", "Source Name", as.character(elements), "Notes"),
+				rownames=FALSE,
+				# filter="top",
+				### https://rstudio.github.io/DT/extensions.html#scroller
+				extensions="Scroller",
+				# escape=FALSE,
+				options=list(
+					dom='fti',
+					columnDefs=list(
+						list(width='1px', targets=c(0)),
+						list(width='150px', targets=c(1)),
+						list(width='200px', targets=c(-1)),
+						# list(width='50px', targets=c(1,2)),
+						# list(width='200px', targets=c(3))
+						list(className="dt-center", targets="_all")
+					),
+					autoWidth=TRUE,
+					sScrollX="100%",
+					scrollX=TRUE,
+					scrollY=360,
+					deferRender=TRUE,
+					# scrollCollapse=TRUE,
+					scroller=TRUE,
+					# animate=FALSE, ### Scroller animation
+					# paging=FALSE,
+					# pageLength=-1,
+					### 'fixedHeader' is not working and is likely a bug
+					### https://github.com/rstudio/DT/issues/389
+					# fixedHeader=TRUE,
+					select=TRUE
+				),
+				editable=TRUE
+			) %>% DT::formatStyle(
+				c(internal@x, internal@y),
+				# target='column',
+				backgroundColor="#F6F6F6"
+			)
+		})
+	})
+
+	### https://rstudio.github.io/DT/shiny.html#manipulate-an-existing-datatables-instance
+	proxy = DT::dataTableProxy('table')
+
+	grab_index = function(x) {
+		index = which((internal@df[selected_x()] == x[selected_x()]) & (internal@df[selected_y()] == x[selected_y()]))
+		# print(index)
+		return(index)
+	}
 
 	# observeEvent(input$table_rows_selected, {
 	# 	### This makes the table reactive to points being selected
-	# 	selection = input$table_rows_selected
-	# 	data = internal@df %>% ungroup()
-
-	# 	selected_data = data %>% filter(row_number() %in% selection) %>% select("ANID", internal@x, internal@y, "Source.Name")
+	# 	previous_selection = internal@selection
+	# 	current_indicies = input$table_rows_selected
+	# 	current_selection = internal@df %>% filter(row_number() %in% current_indicies)
+	# 	# data = internal@df %>% ungroup()
+	# 	# previous_indicies = getSelectionIndex(internal, input$table_rows_selected)
+	# 	print(previous_selection %>% select("ANID", internal@x, internal@y))
 	# 	print("")
-	# 	# print(select(selected_data, "ANID", internal@x, internal@y, "Source.Name"))
-	# 	# print(typeof(selected_data))
-	# 	print(selected_data)
-	# 	# if (length(selection) > 0) {
-	# 	# 	print(data[selection,])
-	# 	# 	print(" ")
-	# 	# }
-	# 	fig@plot = fig@plot + 
-	# 		geom_point(
-	# 			data=selected_data,
-	# 			aes_string(x=selected_x(), y=selected_y(), fill="Source.Name"), 
-	# 			size=2,
-	# 			label="Selected",
-	# 			colour="black",
-	# 			fill="red",
-	# 			shape=21 # To get the outside border
-	# 		)
-	# 	fig@plot <<- fig@plot
+	# 	print(current_selection %>% select("ANID", internal@x, internal@y))
+	# 	# print(previous_indicies)
+
+	# 	# new_selection = previous_selection@selection[-index,]
+
+	# 	# selected_data = data %>% filter(row_number() %in% selection)
+	# 	# internal <<- addSelection(internal, selected_data)
 	# })
+
+
+
+
+
+	# observeEvent(input$upload_files, {
+	# # check_files = reactive({
+	# 	print(paste("[observeEvent] check_input() - Parsing uploaded files"))
+	# 	nfiles = length(input$upload_files$name)
+	# 	temp = data.frame(name=character(), path=character())
+	# 	for (i in 1:nfiles) {
+	# 		newfile = data.frame(
+	# 			name=input$upload_files$name[i],
+	# 			path=input$upload_files$datapath[i],
+	# 			type="artifact",
+	# 			show=FALSE)
+	# 		temp = rbind(temp, newfile)
+	# 	}
+	# 	internal <<- addFiles(internal, temp)
+	# 	print(internal@files$name)
+	
+
+	# })
+
+	observeEvent(c(
+		input$view_uploaded_files,
+		input$upload_files#,
+		# check_files()
+	), {
+		# print(input$upload_files)
+		# print(internal@files)
+		# available_files = internal@files
+
+		if (input$view_uploaded_files) {
+			internal <<- addFiles(input$upload_files)
+			available_files = internal@files %>% select(name) %>% unlist(use.names=FALSE)
+			print(available_files)
+			showModal(
+				modalDialog(
+					title="View uploaded files",
+					selectInput(inputId='test',
+						label="Select the file",
+						choices=available_files
+					),
+					# print(input$test),
+					easyClose=TRUE
+				)
+			)
+		} else {
+			removeModal()
+		}
+	})
 
 }
