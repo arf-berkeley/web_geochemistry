@@ -4,6 +4,7 @@ fixedPage(
 	includeCSS("styles.css"),
 	shinyjs::useShinyjs(),
 	shinyjs::extendShinyjs(script="interactive.js"),
+	shinyalert::useShinyalert(),
 	# shinyjs::extendShinyjs(text="jsCode"),
 	titlePanel("Geochemical Visualization – South America"),
 
@@ -58,6 +59,21 @@ fixedPage(
 					# 	choices=list("Source", "Artifact"),
 					# 	inline=TRUE
 					# ),
+					shinyBS::bsModal(id="upload_modal",
+						title="Change name",
+						trigger="view_uploaded_files",
+						size="large",
+						uiOutput("upload_interface"),
+						tags$div(style="margin-top:10px;margin-bottom:10px;margin-left:0px;margin-right:0px;padding:0px 5px 5px;border:1px solid black;border-radius:5px;",
+							DT::DTOutput("upload_preview")
+						),
+						uiOutput("upload_type_interface"),
+						uiOutput("upload_sample_id_column_interface"),
+						uiOutput("upload_source_column_interface"),
+						uiOutput("upload_element_column_interface"),
+						uiOutput("upload_note_column_interface"),
+						uiOutput("upload_show_interface")
+					),
 					fileInput(inputId='upload_files',
 						label=NULL,
 						multiple=TRUE,

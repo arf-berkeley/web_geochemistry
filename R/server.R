@@ -1,4 +1,5 @@
 cat("\n\n--server.R\n")
+source("dynamic.R") ### This is only here so it refreshes each time, remove when complete
 
 #' New Title
 #' 
@@ -81,7 +82,7 @@ add_selected_points = function(data, plot) {
 
 
 
-server = function(input, output) {
+server = function(input, output, session) {
 	shinyjs::showLog()
 
 	internal = DynamicData()
@@ -469,78 +470,6 @@ server = function(input, output) {
 
 
 
-
-	updatePlot = observeEvent(c(
-			selected_country(),
-			selected_sources(),
-			selected_x(),
-			selected_y(),
-			input$show_source_points,
-			plotly::event_data("plotly_click"),
-			input$table_selection,
-			input$clear_selected
-		), {
-			print(glue("[observeEvent] Update Plot"))
-			output$plot = plotly::renderPlotly({
-				### Debug the various layers of the ggplot2 object (calling result() from 'dynamic.R')
-				# result(fig)
-				##########
-
-				if (length(internal@selection) > 0) {
-					# print(internal@selection %>% select("ANID", internal@x, internal@y))
-					fig = add_selected_points(internal, fig)
-				}
-
-				fig@plot$labels$colour = NULL ### Removes the legend title!
-
-				# print(str(fig@plot))
-
-				pfig = plotly::ggplotly(fig@plot,
-						tooltip=c("ANID", "x", "y")
-					) %>%
-					plotly::layout(
-						margin=list(t=50),
-						legend=list(
-							x=1.0, y=0.5,
-							font=list(family="Helvetica", size=11)
-							# bordercolor=my_border_color,
-							# borderwidth=1
-							#bgcolor=my_background_color
-						)
-					) #%>%
-					# plotly::config@plot(displayModeBar = FALSE)
-
-				# print(str(pfig))
-
-				### Remove the tooltips of the source ellipses from the plotly object 'pfig'
-				for (source in fig@path) {
-					index = getLayerIndex(fig, paste(source, "path"))
-					pfig$x$data[[index]]$hoverinfo = "none"
-				}
-				if (!input$show_source_info) {
-					for (source in fig@point) {
-						index = getLayerIndex(fig, paste(source, "point"))
-						pfig$x$data[[index]]$hoverinfo = "none"
-					}
-				}
-				
-				### Loops through the currently selected sources and removes their 'tooltip'
-				### '$x$data[[i]' is split into lists of the assigned 'groups'
-				# for (i in 1:length(internal@sources)) {
-				# 	fig@plot$x$data[[i]]$hoverinfo = "none"
-				# }
-				# fig@plot$x$data[[2]]$hoverinfo = "none"
-
-				### Fixes 'Warning in origRenderFunc(): Ignoring explicitly provided widget ID'
-				### https://github.com/ropensci/plotly/issues/985
-				pfig$elementId = NULL
-
-				### The 'ggplotly' object must be returned!
-				return(pfig)
-				# fig@plot
-			})
-	})
-
 	#### Create the table
 	### https://shiny.rstudio.com/articles/datatables.html
 	### https://rstudio.github.io/DT/shiny.html
@@ -562,11 +491,12 @@ server = function(input, output) {
 				tab = internal@df #%>% filter(Source.Country == internal@country)
 			}
 
-			tab = tab %>% select(ANID, Source.Name, as.character(elements), NKT_edits)
+			available_elements = elements[elements %in% colnames(tab)]
+			tab = tab %>% select(ANID, Source.Name, as.character(available_elements), NKT_edits)
 
 			DT::datatable(tab,
 				class="compact hover cell-border",
-				colnames=c("ID", "Source Name", as.character(elements), "Notes"),
+				colnames=c("ID", "Source Name", as.character(available_elements), "Notes"),
 				rownames=FALSE,
 				# filter="top",
 				### https://rstudio.github.io/DT/extensions.html#scroller
@@ -582,7 +512,7 @@ server = function(input, output) {
 						# list(width='200px', targets=c(3))
 						list(className="dt-center", targets="_all")
 					),
-					autoWidth=TRUE,
+					# autoWidth=TRUE,
 					sScrollX="100%",
 					scrollX=TRUE,
 					scrollY=360,
@@ -656,33 +586,411 @@ server = function(input, output) {
 
 	# })
 
-	observeEvent(c(
-		input$view_uploaded_files,
-		input$upload_files#,
-		# check_files()
-	), {
-		# print(input$upload_files)
-		# print(internal@files)
-		# available_files = internal@files
+	### Handle adding the new files to the internal data
+	observeEvent(input$upload_files, {
+		df = input$upload_files %>% select(name, datapath)
+		colnames(df) = c("name", "path")
+		df["id"] = NA
+		df["source"] = NA
+		df["element"] = NA
+		df["note"] = NA
+		df["type"] = "Artifact"
+		df["show"] = FALSE
+		internal <<- addDataFile(internal, df, source="upload")
 
-		if (input$view_uploaded_files) {
-			internal <<- addFiles(input$upload_files)
-			available_files = internal@files %>% select(name) %>% unlist(use.names=FALSE)
-			print(available_files)
-			showModal(
-				modalDialog(
-					title="View uploaded files",
-					selectInput(inputId='test',
-						label="Select the file",
-						choices=available_files
+		shinyBS::toggleModal(session,
+			modalId='upload_modal',
+			toggle="open")
+	})
+
+	observeEvent(input$view_uploaded_files, {
+		if (nrow(internal@datafiles) < 1) {
+			shinyalert::shinyalert(title="No Files Uploaded",
+				text="Cannot open uploaded files interface",
+				type="error",
+				closeOnClickOutside=TRUE
+			)
+
+			shinyBS::toggleModal(session,
+				modalId='upload_modal',
+				toggle="close")
+		}
+	})
+
+	# ### Open the modal dialog box to manipulate the new data
+	# observeEvent(c(
+	# 	input$view_uploaded_files,
+	# 	input$upload_files
+	# ), {
+	# 	if ((input$view_uploaded_files) | !is.null(input$upload_files)) { ### This if-statement ensures the Modal is only shown when uploaded files are available
+	# 		if (nrow(internal@datafiles) > 0) {
+	# 			available_files = internal@datafiles %>% select(name) %>% unlist(use.names=FALSE)
+	# 		} else {
+	# 			available_files = list()
+	# 		}
+	# 		# print(available_files)
+	# 		showModal(
+	# 			modalDialog(
+	# 				title="View uploaded files",
+	# 				selectInput(inputId='test',
+	# 					label="Select the file",
+	# 					choices=available_files
+	# 				),
+	# 				print(input$test),
+	# 				easyClose=TRUE
+	# 			)
+	# 		)
+	# 	} else {
+	# 		removeModal()
+	# 	}
+	# })
+
+	# ### Open the modal dialog box to manipulate the new data
+	# observeEvent(input$upload_files, {
+	# 	# print("")
+	# 	# print("Uploaded Files")
+	# 	# print(input$upload_files)
+	# 	if (nrow(internal@datafiles) > 0) {
+	# 		available_files = internal@datafiles %>% select(name) %>% unlist(use.names=FALSE)
+	# 	} else {
+	# 		available_files = list()
+	# 	}
+
+	# 	print(available_files)
+	# 	shinyBS::toggleModal(session, 'test', toggle="open")
+	# })	
+
+
+	output$upload_interface <- renderUI({
+		if (nrow(internal@datafiles) > 0) {
+			available_files = internal@datafiles %>% select(name) %>% unlist(use.names=FALSE)
+		} else {
+			available_files = list()
+		}
+		selectInput(inputId='upload_name',
+			label="Select the file",
+			choices=available_files,
+			selected=available_files[0]
+		)
+		# print("Working")
+		# HTML(input$upload_name)
+	})
+
+	observeEvent(input$upload_name, {
+		uploadpath = internal@datafiles %>% filter(name == input$upload_name) %>% select(path) %>% unlist
+		tab = read.csv(uploadpath, header=FALSE, nrows=10)
+		nrows = nrow(tab)
+		ncolumns = ncol(tab)
+
+		# top = tab %>% filter(row_number() <= 10)
+		# middle = rep("...", ncolumns)
+		# bottom = tab %>% filter(row_number() >= nrows-10)
+		# tab = rbind(top, middle)
+		# tab = rbind(tab, bottom)
+
+		colnames(tab) = 1:ncolumns
+		index = getDataFileIndex(internal, input$upload_name, "type")
+
+		output$upload_type_interface <- renderUI({
+			selectInput(inputId='upload_type',
+				label='Type',
+				choices=c("Artifact", "Source"),
+				selected=internal@datafiles[index,"type"]
+			)
+		})
+
+		output$upload_sample_id_column_interface <- renderUI({
+			selectInput(inputId='upload_sample_id_column',
+				label='Sample ID Column',
+				choices=c("None", colnames(tab)),
+				multiple=FALSE
+			)
+		})
+
+		output$upload_source_column_interface <- renderUI({
+			selectInput(inputId='upload_source_column',
+				label='Source Column',
+				choices=c("None", colnames(tab)),
+				multiple=FALSE
+			)
+		})
+
+		output$upload_element_column_interface <- renderUI({
+			selectInput(inputId='upload_element_column',
+				label='Element Columns',
+				choices=colnames(tab),
+				multiple=TRUE
+			)
+		})
+
+		output$upload_note_column_interface <- renderUI({
+			selectInput(inputId='upload_note_column',
+				label='Note Column',
+				choices=c("None", colnames(tab)),
+				multiple=FALSE
+			)
+		})
+
+		output$upload_show_interface <- renderUI({
+			if (internal@datafiles[index,"show"]) {
+				show = "Yes"
+			} else {
+				show = "No"
+			}
+			radioButtons(inputId='upload_show',
+				label="Show in Plot",
+				choices=list("Yes", "No"),
+				selected=show,
+				inline=TRUE
+			)
+		})
+
+		output$upload_preview <- DT::renderDT({
+			upload_preview_table = DT::datatable(tab,
+				class="compact hover cell-border",
+				rownames=TRUE,
+				extensions="Scroller",
+				options=list(
+					dom='t',
+					ordering=FALSE,
+					columnDefs=list(
+						list(className="dt-center", targets="_all")
 					),
-					# print(input$test),
-					easyClose=TRUE
+					scroller=TRUE,
+					scrollX=TRUE,
+					scrollY=150,
+					sScrollX="100%",
+					select=FALSE
 				)
 			)
-		} else {
-			removeModal()
+
+
+		})
+	})
+
+	# upload_preview_proxy = DT::dataTableProxy('upload_preview')
+
+	observeEvent(input$upload_type, {
+		if (!is.null(input$upload_name)) {
+			internal <<- setDataFileValue(internal, input$upload_name, "type", input$upload_type)
 		}
+	})
+
+	observeEvent(input$upload_sample_id_column, {
+		if (!is.null(input$upload_name)) {
+			internal <<- setDataFileValue(internal, input$upload_name, "id", input$upload_sample_id_column)
+		}
+	})
+
+	observeEvent(input$upload_source_column, {
+		if (!is.null(input$upload_name)) {
+			internal <<- setDataFileValue(internal, input$upload_name, "source", input$upload_source_column)
+		}
+	})
+
+	observeEvent(input$upload_element_column, {
+		if (!is.null(input$upload_name)) {
+			internal <<- setDataFileValue(internal, input$upload_name, "element", list(input$upload_element_column))
+		}
+	})
+
+	observeEvent(input$upload_note_column, {
+		if (!is.null(input$upload_name)) {
+			internal <<- setDataFileValue(internal, input$upload_name, "note", input$upload_note_column)
+		}
+	})
+
+	observeEvent(input$upload_show, {
+		if (input$upload_show == "Yes") {
+			index = getDataFileIndex(internal, input$upload_name, "name")
+			upload = internal@datafiles %>% filter(row_number() == index)
+
+			if (is.na(upload["element"])) {
+				# input$upload_show = "No"
+				# showModal(modalDialog(
+				# 	title="Cannot Add to Plot",
+				# 	size="s",
+				# 	easyClose=TRUE,
+				# 	"No element columns selected."
+				# ))
+				shinyalert::shinyalert(title="Cannot Add to Plot",
+					text="No element columns selected",
+					type="error",
+					closeOnClickOutside=TRUE
+				)
+
+				updateRadioButtons(session, inputId='upload_show',
+					label="Show in Plot",
+					choices=list("Yes", "No"),
+					selected="No",
+					inline=TRUE
+				)
+			} else {
+				showNotification(ui=glue("Adding {input$upload_name} to plot."),
+					type="message",
+					duration=3
+				)
+			}
+
+			tab = read.csv(upload$path, header=TRUE)
+			# print(tab)
+			print("")
+			# print(upload)
+			# print(upload$element[[1]])
+			print(colnames(tab))
+			print("")
+			tab %>% select(as.numeric(upload$element[[1]]))
+
+			print("***Adding uploaded data")
+			print(internal@x)
+			print(internal@y)
+			# print(colnames(tab))
+			# print(data@x, data@y)
+			layer = geom_point(tab,
+					mapping=aes_string(x=internal@x, y=internal@y), 
+					size=2,
+					label=upload$name,
+					color="blue",
+					shape=17 # Solid triangle
+				)
+			fig = addPoint(fig, layer, "upload")
+			fig <<- fig
+
+		}
+	})
+
+
+	# observeEvent(c(
+	# 	input$upload_sample_type,
+	# 	input$upload_sample_id_column,
+	# 	input$upload_source_column,
+	# 	input$upload_element_column,
+	# 	input$upload_note_column
+	# ), {
+	# 	# print("**Updating column background color")
+	# 	# # print(glue(as.numeric(input$upload_note_column), " ", is.numeric(as.numeric(input$upload_note_column))))
+	# 	# # print(c(as.numeric(input$upload_note_column)))
+	# 	# if (!is.na(as.numeric(input$upload_note_column))) {
+	# 	# 	# print(c(as.numeric(input$upload_note_column)))
+	# 	# 	print("***Adding the new background")
+	# 	# 	reloadData(upload_preview_proxy) %>% DT::formatStyle(
+	# 	# 						c(1),
+	# 	# 						c("#4D4D4D")
+	# 	# 						# target='column',
+	# 	# 						# backgroundColor="#4D4D4D"
+	# 	# 					)
+	# 	# }
+
+
+
+
+	# })
+
+	# output$upload_sample_id_column_interface <- renderUI({
+	# 	print(list(1:10))
+	# 	selectInput(inputId='upload_sample_id_column',
+	# 		label='Sample ID Column',
+	# 		choices=list(1:10),
+	# 		selected=1
+	# 	)
+	# })
+
+	observeEvent(c(
+		input$upload_name,
+		input$upload_type,
+		input$upload_sample_id_column,
+		input$upload_source_column,
+		input$upload_element_column,
+		input$upload_note_column
+	), {
+		# print(glue("Upload Modal Selection: ", input$upload_name))
+		# print(glue("\tType: ", input$upload_format_type))
+		# print(glue("\tSample ID: ", input$upload_sample_id_column))
+		# print(glue("\tSource: ", input$upload_source_column))
+		# if (length(input$upload_element_column) > 0) {
+		# 	print(glue("\tElements: ", paste(sort(input$upload_element_column), collapse=", ")))
+		# } else {
+		# 	print(glue("\tElements: None"))
+		# }
+		# print(glue("\tNote: ", input$upload_note_column))
+		# temp = internal@datafiles %>% select(name, id, source, element, note, type, show)
+		# print(temp)
+	})
+
+
+
+
+
+	updatePlot = observeEvent(c(
+			selected_country(),
+			selected_sources(),
+			selected_x(),
+			selected_y(),
+			input$show_source_points,
+			plotly::event_data("plotly_click"),
+			input$table_selection,
+			input$clear_selected,
+			input$upload_show
+		), {
+			print(glue("[observeEvent] Update Plot"))
+			output$plot = plotly::renderPlotly({
+				### Debug the various layers of the ggplot2 object (calling result() from 'dynamic.R')
+				# result(fig)
+				##########
+
+				if (length(internal@selection) > 0) {
+					# print(internal@selection %>% select("ANID", internal@x, internal@y))
+					fig = add_selected_points(internal, fig)
+				}
+
+				fig@plot$labels$colour = NULL ### Removes the legend title!
+
+				# print(str(fig@plot))
+
+				pfig = plotly::ggplotly(fig@plot,
+						tooltip=c("ANID", "x", "y")
+					) %>%
+					plotly::layout(
+						margin=list(t=50),
+						legend=list(
+							x=1.0, y=0.5,
+							font=list(family="Helvetica", size=11)
+							# bordercolor=my_border_color,
+							# borderwidth=1
+							#bgcolor=my_background_color
+						)
+					) #%>%
+					# plotly::config@plot(displayModeBar = FALSE)
+
+				# print(str(pfig))
+
+				### Remove the tooltips of the source ellipses from the plotly object 'pfig'
+				for (source in fig@path) {
+					index = getLayerIndex(fig, paste(source, "path"))
+					pfig$x$data[[index]]$hoverinfo = "none"
+				}
+				if (!input$show_source_info) {
+					for (source in fig@point) {
+						index = getLayerIndex(fig, paste(source, "point"))
+						pfig$x$data[[index]]$hoverinfo = "none"
+					}
+				}
+				
+				### Loops through the currently selected sources and removes their 'tooltip'
+				### '$x$data[[i]' is split into lists of the assigned 'groups'
+				# for (i in 1:length(internal@sources)) {
+				# 	fig@plot$x$data[[i]]$hoverinfo = "none"
+				# }
+				# fig@plot$x$data[[2]]$hoverinfo = "none"
+
+				### Fixes 'Warning in origRenderFunc(): Ignoring explicitly provided widget ID'
+				### https://github.com/ropensci/plotly/issues/985
+				pfig$elementId = NULL
+
+				### The 'ggplotly' object must be returned!
+				return(pfig)
+				# fig@plot
+			})
 	})
 
 }

@@ -3,13 +3,18 @@ print("Running 'config.R'.")
 # library("readxl")
 library("dplyr")
 
-elements = list("Barium"="Ba", "Lanthanum"="La", "Lutetium"="Lu", "Neodynium"="Nd",
+xrf_elements = list("Iron"="Fe", "Manganese"="Mn", "Neodynium"="Nd", "Rubidium"="Rb",
+	"Strontium"="Sr", "Yttrium"="Y", "Zirconium"="Zr")
+
+naa_elements = list("Barium"="Ba", "Lanthanum"="La", "Lutetium"="Lu",
 	"Samarium"="Sm", "Uranium"="U", "Ytterbium"="Yb", "Cerium"="Ce",
-	"Cobalt"="Co", "Caesium"="Cs", "Europium"="Eu", "Iron"="Fe",
-	"Hafnium"="Hf", "Rubidium"="Rb", "Antimony"="Sb", "Scandium"="Sc", 
-	"Strontium"="Sr", "Tantalum"="Ta", "Terbium"="Tb", "Thorium"="Th",
-	"Zinc"="Zn", "Zirconium"="Zr", "Aluminium"="Al", "Chlorine"="Cl",
-	"Dysprosium"="Dy", "Potassium"="K", "Manganese"="Mn", "Sodium"="Na")
+	"Cobalt"="Co", "Caesium"="Cs", "Europium"="Eu",
+	"Hafnium"="Hf", "Antimony"="Sb", "Scandium"="Sc", 
+	"Tantalum"="Ta", "Terbium"="Tb", "Thorium"="Th",
+	"Zinc"="Zn", "Aluminium"="Al", "Chlorine"="Cl",
+	"Dysprosium"="Dy", "Potassium"="K", "Sodium"="Na")
+
+elements = xrf_elements
 
 # my_border_color="#E2E2E2"
 my_border_color="#BCE8F1" # From shinyBS 'primary'

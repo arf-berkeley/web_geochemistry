@@ -7,6 +7,7 @@
 library("shiny")
 library("DT") # Interactive datatable using jQuery's Datatables
 library("shinyBS") # Collapsable panels and many other bootstrap interfaces
+library("shinyalert") # Alert related modal pop-ups
 library("shinyjs") # Javascript supprot in Shiny
 ### This required for shinyapps.io to use extendedShinyjs() from the "shinyjs" package
 ### Also see "Note" section of "extendShinyjs" function definition in "shinyjs" package documentation:

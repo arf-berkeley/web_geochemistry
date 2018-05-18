@@ -13,13 +13,14 @@ data = read.csv("data/obsidian-NAA-database.csv")
 DynamicData = setClass("DynamicData",
 	slots = c(
 		df="data.frame",
+		udata="data.frame",
 		country="character",
 		sources="character",
 		last_source="character",
 		x="character",
 		y="character",
 		selection="data.frame",
-		files="data.frame"
+		datafiles="data.frame"
 	),
 	prototype=list(
 		df=data.frame(),
@@ -29,7 +30,10 @@ DynamicData = setClass("DynamicData",
 		x="",
 		y="",
 		selection=data.frame(),
-		files=data.frame(name=character(), path=character(), type=character(), show=logical())
+		datafiles=data.frame(name=character(), path=character(), # File Information
+			id=character(), source=character(), element=list(), note=character(), # Table Information
+			type=character(), show=logical() # Plot Information
+		)
 	)#,
 	# validity=function(self) {
 	# 	if (!(self@country %in% source_countries)) {
@@ -40,14 +44,42 @@ DynamicData = setClass("DynamicData",
 )
 
 
-setGeneric(name="addFiles", function(self, df) {
-	standardGeneric("addFiles")
+setGeneric(name="addDataFile", function(self, df, source) {
+	standardGeneric("addDataFile")
 })
 
-setMethod(f="addFiles", signature="DynamicData", function(self, df) {
-	print(glue("Adding {nrow(df)} new files"))
-	self@files = rbind(self@files, df)
+setMethod(f="addDataFile", signature="DynamicData", function(self, df, source) {
+	self@datafiles = rbind(self@datafiles, df)
 	return(self)
+})
+
+setGeneric(name="setDataFileValue", function(self, file, column, value) {
+	standardGeneric("setDataFileValue")
+})
+
+setMethod(f="setDataFileValue", signature="DynamicData", function(self, file, column, value) {
+	index = getDataFileIndex(self, file, column)
+	if (!is.na(index)) {
+		self@datafiles[index, column] = list(value)
+	} else {
+		print(glue::glue("[WARN] <row> not present in datafiles"))
+	}
+	return(self)
+})
+
+setGeneric(name="getDataFileIndex", function(self, file, column) {
+	standardGeneric("getDataFileIndex")
+})
+
+setMethod(f="getDataFileIndex", signature="DynamicData", function(self, file, column) {
+	if (column %in% colnames(self@datafiles)) {
+		row = self@datafiles %>% filter(name == file)
+		index = prodlim::row.match(row, self@datafiles, nomatch=NA)
+	} else {
+		index = NA
+		print(glue::glue("[WARN] <name> not present in datafiles"))
+	}
+	return(index)
 })
 
 
