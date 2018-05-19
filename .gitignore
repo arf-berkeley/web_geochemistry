@@ -1,8 +1,11 @@
 ### Sublime Text project/workspace files
 *.sublime*
 
-### Ignore the testing/ directory
+### Ignore the testing, data, example, and documentation directories
 testing/*
+R/data/*
+ex/*
+doc/*
 
 ### Ignore files associated with shinyapps.io
 rsconnect

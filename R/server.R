@@ -473,12 +473,12 @@ server = function(input, output, session) {
 	toggle_source_points = observeEvent(input$show_source_points, {
 		print(glue("[observeEvent] toggle_source_points() - Toggle source points <{input$show_source_points}>"))
 		if (input$show_source_points) {
-			for (source in fig@path) {
+			for (source in internal@sources) {
 				# print(glue("\t[toggle] Adding {source}"))
 				fig <<- add_source_point(source, internal, fig)
 			}
 		} else {
-			for (source in fig@point) {
+			for (source in internal@sources) {
 				# print(glue("\t[toggle] Removing {source}"))
 				fig <<- remove_source_point(source, fig)
 			}
@@ -846,6 +846,13 @@ server = function(input, output, session) {
 
 				internal <<- addDatafileData(internal, input$upload_name)
 				fig <<- add_artifact_point(input$upload_name, internal, fig)
+				print("***")
+				print(fig@point)
+				print(fig@path)
+				print(fig@layer)
+				print("")
+				print(internal@sources)
+				print("***")
 			}
 
 			# tab = read.csv(upload$path, header=TRUE)
@@ -981,14 +988,16 @@ server = function(input, output, session) {
 				# print(str(pfig))
 
 				### Remove the tooltips of the source ellipses from the plotly object 'pfig'
-				for (source in fig@path) {
+				for (source in internal@sources) {
 					index = getLayerIndex(fig, paste(source, "path"))
 					pfig$x$data[[index]]$hoverinfo = "none"
 				}
 				if (!input$show_source_info) {
-					for (source in fig@point) {
+					for (source in internal@sources) {
 						index = getLayerIndex(fig, paste(source, "point"))
-						pfig$x$data[[index]]$hoverinfo = "none"
+						if (!is.na(index)) {
+							pfig$x$data[[index]]$hoverinfo = "none"
+						}
 					}
 				}
 				
