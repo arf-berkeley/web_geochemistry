@@ -132,11 +132,11 @@ fixedPage(
 					value=FALSE),
 				checkboxInput(inputId='show_source_info',
 					label="Show source information",
+					value=FALSE),
+				checkboxInput(inputId='include_source_data',
+					label="Include source data in table",
 					value=FALSE)
 
-				# checkboxInput(inputId='plot_artifact_points',
-				# 	label="Plot artifact points",
-				# 	value=TRUE),
 				# checkboxInput(inputId='plot_artifact_labels',
 				# 	label="Label artifact points",
 				# 	value=FALSE),

@@ -1,5 +1,12 @@
+print("*** Loading dynamic.R")
+
 source("config.R")
 data = read.csv("data/obsidian-NAA-database.csv")
+
+library("dplyr")
+library("glue")
+library("prodlim")
+library("ggplot2") # Used by DynamicPlot
 
 ###########################################################
 #' An S4 class for dynamically maintaining the data available to the application
@@ -13,28 +20,28 @@ data = read.csv("data/obsidian-NAA-database.csv")
 DynamicData = setClass("DynamicData",
 	slots = c(
 		df="data.frame",
-		udata="data.frame",
 		country="character",
 		sources="character",
 		last_source="character",
 		x="character",
 		y="character",
 		selection="data.frame",
-		datafiles="data.frame"
-	),
-	prototype=list(
-		df=data.frame(),
-		country="",
-		sources=c(),
-		last_source="",
-		x="",
-		y="",
-		selection=data.frame(),
-		datafiles=data.frame(name=character(), path=character(), # File Information
-			id=character(), source=character(), element=list(), note=character(), # Table Information
-			type=character(), show=logical() # Plot Information
-		)
+		datafiles="data.frame",
+		upload="list"
 	)#,
+	# prototype=list(
+	# 	df=data.frame(),
+	# 	country="",
+	# 	sources=c(),
+	# 	last_source="",
+	# 	x="",
+	# 	y="",
+	# 	selection=data.frame(),
+	# 	datafiles=data.frame(name=character(), path=character(), # File Information
+	# 		id=character(), source=character(), element=list(), note=character(), # Table Information
+	# 		type=character(), show=logical() # Plot Information
+	# 	)
+	# )#,
 	# validity=function(self) {
 	# 	if (!(self@country %in% source_countries)) {
 	# 		return("Invalid country")
@@ -44,42 +51,101 @@ DynamicData = setClass("DynamicData",
 )
 
 
-setGeneric(name="addDataFile", function(self, df, source) {
-	standardGeneric("addDataFile")
+setGeneric(name="addDatafile", function(self, df, source) {
+	standardGeneric("addDatafile")
 })
 
-setMethod(f="addDataFile", signature="DynamicData", function(self, df, source) {
+setMethod(f="addDatafile", signature="DynamicData", function(self, df, source) {
 	self@datafiles = rbind(self@datafiles, df)
 	return(self)
 })
 
-setGeneric(name="setDataFileValue", function(self, file, column, value) {
-	standardGeneric("setDataFileValue")
+setGeneric(name="setDatafileValue", function(self, file, column, value) {
+	standardGeneric("setDatafileValue")
 })
 
-setMethod(f="setDataFileValue", signature="DynamicData", function(self, file, column, value) {
-	index = getDataFileIndex(self, file, column)
+setMethod(f="setDatafileValue", signature="DynamicData", function(self, file, column, value) {
+	index = getDatafileIndex(self, file, column)
 	if (!is.na(index)) {
 		self@datafiles[index, column] = list(value)
 	} else {
-		print(glue::glue("[WARN] <row> not present in datafiles"))
+		print(glue("[WARN] <row> not present in datafiles"))
 	}
 	return(self)
 })
 
-setGeneric(name="getDataFileIndex", function(self, file, column) {
-	standardGeneric("getDataFileIndex")
+setGeneric(name="getDatafileIndex", function(self, file, column) {
+	standardGeneric("getDatafileIndex")
 })
 
-setMethod(f="getDataFileIndex", signature="DynamicData", function(self, file, column) {
+setMethod(f="getDatafileIndex", signature="DynamicData", function(self, file, column) {
 	if (column %in% colnames(self@datafiles)) {
 		row = self@datafiles %>% filter(name == file)
 		index = prodlim::row.match(row, self@datafiles, nomatch=NA)
 	} else {
 		index = NA
-		print(glue::glue("[WARN] <name> not present in datafiles"))
+		print(glue("[WARN] {column} not present in datafiles"))
 	}
 	return(index)
+})
+
+setGeneric(name="addDatafileData", function(self, filename) {
+	standardGeneric("addDatafileData")
+})
+
+setMethod(f="addDatafileData", signature="DynamicData", function(self, filename) {
+	row = self@datafiles %>% filter(name == filename)
+
+	### Determine which columns to extract from the uploaded data
+	columns = c()
+	if (!(row["id"][[1]] == "None")) {
+		columns = c(columns, unlist(row["id"], use.names=FALSE))
+	}
+	if (!(row["source"][[1]] == "None")) {
+		columns = c(columns, unlist(row["source"], use.names=FALSE))
+	}
+	if (!(row["element"][[1]] == "None")) {
+		columns = c(columns, unlist(row["element"], use.names=FALSE))
+	}
+	if (!(row["note"][[1]] == "None")) {
+		columns = c(columns, unlist(row["note"], use.names=FALSE))
+	}
+
+	### Load the data and select the specified columns
+	data = read.csv(row$path, header=TRUE) %>% select(as.numeric(columns))
+
+	### Add basic columns if not present and standardize the column names
+	if (row["id"][[1]] == "None") {
+		data[,"id"] = NA
+	}
+	if (row["note"][[1]] == "None") {
+		data[,"note"] = ""
+	}
+	# elements = colnames(data) %>% select(as.numeric(row["element"]))
+	# names = c("id", "group", elements, "note")
+	# colnames(data) =  names
+
+	### Append this new data to the uploaded file data.frame list
+	### Note: the first elements stores an ordered list of the added files
+	if (length(self@upload) == 0) { # Initialize the list
+		self@upload[[1]] = c(filename)
+	} else { # Add to the list
+		self@upload[[1]] = c(self@upload[[1]], filename)
+	}
+	n = length(self@upload)
+	self@upload[[n+1]] = data
+	self = setDatafileValue(self, filename, "pos", n+1) # Track the position in self@datafiles
+
+	return(self)
+})
+
+setGeneric(name="getDatafileData", function(self, filename) {
+	standardGeneric("getDatafileData")
+})
+
+setMethod(f="getDatafileData", signature="DynamicData", function(self, filename) {
+	position = match(filename, self@upload[[1]])
+	return(self@upload[[position+1]])
 })
 
 
@@ -233,7 +299,7 @@ setMethod(f="removeSelection", signature="DynamicData", function(self, row){
 		self@selection = self@selection[-index,]
 		rownames(self@selection) = NULL ### Re-indexes the rows after removing one
 	} else {
-		print(glue::glue("[WARN] <row> not present in selection"))
+		print(glue("[WARN] <row> not present in selection"))
 	}
 	return(self)
 })
@@ -278,7 +344,7 @@ setMethod(f="clearSelection", signature="DynamicData", function(self){
 
 # cat("\nGetting index of 'Second' row\n")
 # index = getSelectionIndex(test, second)
-# print(glue::glue("{index} (should be 2)"))
+# print(glue("{index} (should be 2)"))
 
 # cat("\nRemoving 'Second' row\n")
 # test = removeSelection(test, second)
@@ -286,7 +352,7 @@ setMethod(f="clearSelection", signature="DynamicData", function(self){
 
 # cat("\nGetting index of 'Second' row\n")
 # index = getSelectionIndex(test, second)
-# print(glue::glue("{index} (should be NA)"))
+# print(glue("{index} (should be NA)"))
 
 # cat("\nRemoving 'Second' row, again (should throw a warning, but no error)\n")
 # test = removeSelection(test, second)
@@ -294,7 +360,7 @@ setMethod(f="clearSelection", signature="DynamicData", function(self){
 
 # cat("\nGetting index of 'Third' row\n")
 # index = getSelectionIndex(test, third)
-# print(glue::glue("{index} (should be 2)"))
+# print(glue("{index} (should be 2)"))
 ############################################################
 
 
@@ -330,8 +396,6 @@ setMethod(f="clearSelection", signature="DynamicData", function(self){
 
 
 
-
-library("ggplot2")
 
 ###########################################################
 #' An S4 class for dynamically building and tracking the layers
@@ -425,7 +489,7 @@ setMethod(f="addPoint", signature="DynamicPlot", function(self, element, id) {
 		self@point = c(self@point, id)
 		self = addLayer(self, id, "point")
 	} else {
-		print(glue::glue("[WARN] <{id}> 'point' already present"))
+		print(glue("[WARN] <{id}> 'point' already present"))
 	}
 	return(self)
 })
@@ -445,7 +509,7 @@ setMethod(f="addPath", signature="DynamicPlot", function(self, element, id) {
 		self@path = c(self@path, id)
 		self = addLayer(self, id, "path")
 	} else {
-		print(glue::glue("[WARN] <{id}> 'path' already present"))
+		print(glue("[WARN] <{id}> 'path' already present"))
 	}
 	return(self)
 })
@@ -497,7 +561,7 @@ setMethod(f="removePoint", signature="DynamicPlot", function(self, id){
 		self@point = self@point[!(self@point == id)]
 		self = removeLayer(self, id, "point")
 	} else {
-		print(glue::glue("[WARN] <{id}> 'point' not present"))
+		print(glue("[WARN] <{id}> 'point' not present"))
 	}
 	return(self)
 })
@@ -518,7 +582,7 @@ setMethod(f="removePath", signature="DynamicPlot", function(self, id){
 		self@path = self@path[!(self@path == id)]
 		self = removeLayer(self, id, "path")
 	} else {
-		print(glue::glue("[WARN] <{id}> 'point' not present"))
+		print(glue("[WARN] <{id}> 'point' not present"))
 	}
 	return(self)
 })
@@ -598,38 +662,38 @@ setMethod(f="getPathIndex", signature="DynamicPlot", function(self, id){
 # test = DynamicPlot()
 
 result = function(self) {
-	cat(glue::glue("Points ({length(self@point)}):"), paste(self@point, collapse=", "), "\n")
-	cat(glue::glue("Paths ({length(self@path)}):"), paste(self@path, collapse=", "), "\n")
-	cat(glue::glue("Layers ({length(self@layer)}):"), paste(self@layer, collapse=", "), "\n\n")
+	cat(glue("Points ({length(self@point)}):"), paste(self@point, collapse=", "), "\n")
+	cat(glue("Paths ({length(self@path)}):"), paste(self@path, collapse=", "), "\n")
+	cat(glue("Layers ({length(self@layer)}):"), paste(self@layer, collapse=", "), "\n\n")
 }
 
 # label = "point1"
-# print(glue::glue("addPoint('{label}')"))
+# print(glue("addPoint('{label}')"))
 # test = addPoint(test, label)
 # result(test)
 
 # label = "path1"
-# print(glue::glue("addPath('{label}')"))
+# print(glue("addPath('{label}')"))
 # test = addPath(test, label)
 # result(test)
 
 # label = "point2"
-# print(glue::glue("addPoint('{label}')"))
+# print(glue("addPoint('{label}')"))
 # test = addPoint(test, label)
 # result(test)
 
 # label = "path2"
-# print(glue::glue("addPath('{label}')"))
+# print(glue("addPath('{label}')"))
 # test = addPath(test, label)
 # result(test)
 
 # label = "point1"
-# print(glue::glue("removePoint('{label}')"))
+# print(glue("removePoint('{label}')"))
 # test = removePoint(test, label)
 # result(test)
 
 # label = "path1"
-# print(glue::glue("removePath('{label}')"))
+# print(glue("removePath('{label}')"))
 # test = removePath(test, label)
 # result(test)
 

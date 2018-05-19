@@ -1,14 +1,9 @@
-### Dependencies:
-### 	shiny, readxl, glue, shinyBS, plotly, dplyr, DT
-### Install all of these using:
-### 	install.packages(c("shiny", "readxl", "glue", "shinyBS", "plotly", "dplyr", "DT"))
-
 ### Shiny Libraries
 library("shiny")
 library("DT") # Interactive datatable using jQuery's Datatables
 library("shinyBS") # Collapsable panels and many other bootstrap interfaces
 library("shinyalert") # Alert related modal pop-ups
-library("shinyjs") # Javascript supprot in Shiny
+library("shinyjs") # Javascript support in Shiny
 ### This required for shinyapps.io to use extendedShinyjs() from the "shinyjs" package
 ### Also see "Note" section of "extendShinyjs" function definition in "shinyjs" package documentation:
 ### 	https://cran.r-project.org/web/packages/shinyjs/shinyjs.pdf
@@ -22,6 +17,7 @@ library("plotly")
 library("dplyr") # Use of the '%>%' operator, and much more
 ### Example of '%>%' usage: http://genomicsclass.github.io/book/pages/dplyr_tutorial.html#pipe-operator-
 library("glue")
+library("readxl") # For reading Microsoft Excel files
 
 ### Local scripts
 source("config.R")

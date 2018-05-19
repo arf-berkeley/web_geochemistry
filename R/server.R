@@ -1,5 +1,4 @@
 cat("\n\n--server.R\n")
-source("dynamic.R") ### This is only here so it refreshes each time, remove when complete
 
 #' New Title
 #' 
@@ -79,7 +78,26 @@ add_selected_points = function(data, plot) {
 	return(plot)
 }
 
+#' @describeIn SomethingNew Add artifact points
+add_artifact_point = function(filename, data, plot) {
+	df = getDatafileData(data, filename) %>% select(SampleID, SiteID, data@x, data@y, note)
 
+	layer = geom_point(df, 
+		mapping=aes_string(x=data@x, y=data@y, color="SiteID"),
+		inherit.aes=FALSE,
+		shape=17 # Solid triangle
+	)
+
+	plot = addPoint(plot, layer, filename)
+	return(plot)
+}
+
+# #' @describeIn SomethingNew Remove the source points
+# remove_artifact_point = function(source, plot) {
+# 	# print(glue("\t[remove_source_point()] Remove source points {source}"))
+# 	plot = removePoint(plot, source)
+# 	return(plot)
+# }
 
 
 server = function(input, output, session) {
@@ -481,16 +499,6 @@ server = function(input, output, session) {
 		selected_sources()
 	), {
 		output$table <- DT::renderDT({
-			# print("Running 'renderDataTable()'.")
-			if (!is.null(input$file1)) {
-				# print("     Uploaded file!")
-				# print(input$file1)
-				tab = internal@df %>% filter(Source.Country == internal@country)
-			} else {
-				# print("     No uploaded file...")
-				tab = internal@df #%>% filter(Source.Country == internal@country)
-			}
-
 			available_elements = elements[elements %in% colnames(tab)]
 			tab = tab %>% select(ANID, Source.Name, as.character(available_elements), NKT_edits)
 
@@ -590,13 +598,14 @@ server = function(input, output, session) {
 	observeEvent(input$upload_files, {
 		df = input$upload_files %>% select(name, datapath)
 		colnames(df) = c("name", "path")
-		df["id"] = NA
-		df["source"] = NA
+		df["id"] = "None"
+		df["source"] = "None"
 		df["element"] = NA
-		df["note"] = NA
+		df["note"] = "None"
 		df["type"] = "Artifact"
 		df["show"] = FALSE
-		internal <<- addDataFile(internal, df, source="upload")
+		df["pos"] = NA ### This may not be necessary
+		internal <<- addDatafile(internal, df, source="upload")
 
 		shinyBS::toggleModal(session,
 			modalId='upload_modal',
@@ -689,7 +698,7 @@ server = function(input, output, session) {
 		# tab = rbind(tab, bottom)
 
 		colnames(tab) = 1:ncolumns
-		index = getDataFileIndex(internal, input$upload_name, "type")
+		index = getDatafileIndex(internal, input$upload_name, "type")
 
 		output$upload_type_interface <- renderUI({
 			selectInput(inputId='upload_type',
@@ -703,6 +712,7 @@ server = function(input, output, session) {
 			selectInput(inputId='upload_sample_id_column',
 				label='Sample ID Column',
 				choices=c("None", colnames(tab)),
+				selected=internal@datafiles[index,"id"],
 				multiple=FALSE
 			)
 		})
@@ -711,6 +721,7 @@ server = function(input, output, session) {
 			selectInput(inputId='upload_source_column',
 				label='Source Column',
 				choices=c("None", colnames(tab)),
+				selected=internal@datafiles[index,"source"],
 				multiple=FALSE
 			)
 		})
@@ -719,6 +730,7 @@ server = function(input, output, session) {
 			selectInput(inputId='upload_element_column',
 				label='Element Columns',
 				choices=colnames(tab),
+				selected=c(unlist(internal@datafiles[index,"element"], use.names=FALSE)),
 				multiple=TRUE
 			)
 		})
@@ -727,6 +739,7 @@ server = function(input, output, session) {
 			selectInput(inputId='upload_note_column',
 				label='Note Column',
 				choices=c("None", colnames(tab)),
+				selected=internal@datafiles[index,"note"],
 				multiple=FALSE
 			)
 		})
@@ -772,37 +785,37 @@ server = function(input, output, session) {
 
 	observeEvent(input$upload_type, {
 		if (!is.null(input$upload_name)) {
-			internal <<- setDataFileValue(internal, input$upload_name, "type", input$upload_type)
+			internal <<- setDatafileValue(internal, input$upload_name, "type", input$upload_type)
 		}
 	})
 
 	observeEvent(input$upload_sample_id_column, {
 		if (!is.null(input$upload_name)) {
-			internal <<- setDataFileValue(internal, input$upload_name, "id", input$upload_sample_id_column)
+			internal <<- setDatafileValue(internal, input$upload_name, "id", input$upload_sample_id_column)
 		}
 	})
 
 	observeEvent(input$upload_source_column, {
 		if (!is.null(input$upload_name)) {
-			internal <<- setDataFileValue(internal, input$upload_name, "source", input$upload_source_column)
+			internal <<- setDatafileValue(internal, input$upload_name, "source", input$upload_source_column)
 		}
 	})
 
 	observeEvent(input$upload_element_column, {
 		if (!is.null(input$upload_name)) {
-			internal <<- setDataFileValue(internal, input$upload_name, "element", list(input$upload_element_column))
+			internal <<- setDatafileValue(internal, input$upload_name, "element", list(input$upload_element_column))
 		}
 	})
 
 	observeEvent(input$upload_note_column, {
 		if (!is.null(input$upload_name)) {
-			internal <<- setDataFileValue(internal, input$upload_name, "note", input$upload_note_column)
+			internal <<- setDatafileValue(internal, input$upload_name, "note", input$upload_note_column)
 		}
 	})
 
 	observeEvent(input$upload_show, {
 		if (input$upload_show == "Yes") {
-			index = getDataFileIndex(internal, input$upload_name, "name")
+			index = getDatafileIndex(internal, input$upload_name, "name")
 			upload = internal@datafiles %>% filter(row_number() == index)
 
 			if (is.na(upload["element"])) {
@@ -830,31 +843,34 @@ server = function(input, output, session) {
 					type="message",
 					duration=3
 				)
+
+				internal <<- addDatafileData(internal, input$upload_name)
+				fig <<- add_artifact_point(input$upload_name, internal, fig)
 			}
 
-			tab = read.csv(upload$path, header=TRUE)
-			# print(tab)
-			print("")
-			# print(upload)
-			# print(upload$element[[1]])
-			print(colnames(tab))
-			print("")
-			tab %>% select(as.numeric(upload$element[[1]]))
+			# tab = read.csv(upload$path, header=TRUE)
+			# # print(tab)
+			# # print("")
+			# # # print(upload)
+			# # # print(upload$element[[1]])
+			# # print(colnames(tab))
+			# # print("")
+			# tab %>% select(as.numeric(upload$element[[1]]))
 
-			print("***Adding uploaded data")
-			print(internal@x)
-			print(internal@y)
-			# print(colnames(tab))
-			# print(data@x, data@y)
-			layer = geom_point(tab,
-					mapping=aes_string(x=internal@x, y=internal@y), 
-					size=2,
-					label=upload$name,
-					color="blue",
-					shape=17 # Solid triangle
-				)
-			fig = addPoint(fig, layer, "upload")
-			fig <<- fig
+			# print("***Adding uploaded data")
+			# # print(internal@x)
+			# # print(internal@y)
+			# # print(colnames(tab))
+			# # print(data@x, data@y)
+			# layer = geom_point(tab,
+			# 		mapping=aes_string(x=internal@x, y=internal@y), 
+			# 		size=2,
+			# 		label=upload$name,
+			# 		color="blue",
+			# 		shape=17 # Solid triangle
+			# 	)
+			# fig = addPoint(fig, layer, "upload")
+			# fig <<- fig
 
 		}
 	})
