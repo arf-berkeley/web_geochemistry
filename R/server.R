@@ -92,7 +92,7 @@ add_artifact_point = function(filename, data, plot) {
 	return(plot)
 }
 
-#' @describeIn SomethingNew Remove the source points
+#' @describeIn SomethingNew Remove the artifact points
 remove_artifact_point = function(filename, plot) {
 	# print(glue("\t[remove_source_point()] Remove source points {source}"))
 	plot = removePoint(plot, filename)
@@ -105,6 +105,9 @@ showInfo = function(str, duration=3) {
 }
 showWarn = function(str, duration=3) {
 	showNotification(ui=str, type="warning", duration=duration)
+}
+showAlert = function(title, text) {
+	shinyalert::shinyalert(title, text,	type="error", closeOnClickOutside=TRUE)
 }
 ##########
 
@@ -604,15 +607,25 @@ server = function(input, output, session) {
 
 	### Handle adding the new files to the internal data
 	observeEvent(input$upload_files, {
-		df = input$upload_files %>% select(name, datapath)
-		colnames(df) = c("name", "path")
-		df["id"] = "None"
-		df["source"] = "None"
-		df["element"] = "None"
-		df["note"] = "None"
-		df["type"] = "Artifact"
-		df["show"] = "No"
-		internal <<- addDatafile(internal, df, source="upload")
+		for (index in 1:nrow(input$upload_files)) {
+			df = input$upload_files %>% filter(row_number() == index) %>% select(name, datapath)
+			print(glue("Adding {df$name}..."))
+			colnames(df) = c("name", "path")
+			df["id"] = "None"
+			df["group"] = "None"
+			df["element"] = "None"
+			df["note"] = "None"
+			df["type"] = "Artifact"
+			df["show"] = "No"
+			internal <<- addDatafile(internal, df, src="user")
+		}
+
+		output$upload_interface <- renderUI({
+			selectInput(inputId='upload_name',
+				label="Select the file",
+				choices=names(internal@datafiles)
+			)
+		})
 
 		shinyBS::toggleModal(session,
 			modalId='upload_modal',
@@ -620,16 +633,9 @@ server = function(input, output, session) {
 	})
 
 	observeEvent(input$view_uploaded_files, {
-		if (nrow(internal@datafiles) < 1) {
-			shinyalert::shinyalert(title="No Files Uploaded",
-				text="Cannot open uploaded files interface",
-				type="error",
-				closeOnClickOutside=TRUE
-			)
-
-			shinyBS::toggleModal(session,
-				modalId='upload_modal',
-				toggle="close")
+		if (length(internal@datafiles) == 0) {
+			showAlert(title="No Files Uploaded", text="Cannot open uploaded files interface")
+			shinyBS::toggleModal(session, modalId='upload_modal', toggle="close")
 		}
 	})
 
@@ -676,25 +682,10 @@ server = function(input, output, session) {
 	# 	shinyBS::toggleModal(session, 'test', toggle="open")
 	# })	
 
-
-	output$upload_interface <- renderUI({
-		if (nrow(internal@datafiles) > 0) {
-			available_files = internal@datafiles %>% select(name) %>% unlist(use.names=FALSE)
-		} else {
-			available_files = list()
-		}
-		selectInput(inputId='upload_name',
-			label="Select the file",
-			choices=available_files,
-			selected=available_files[0]
-		)
-		# print("Working")
-		# HTML(input$upload_name)
-	})
-
 	observeEvent(input$upload_name, {
-		uploadpath = internal@datafiles %>% filter(name == input$upload_name) %>% select(path) %>% unlist
-		tab = read.csv(uploadpath, header=FALSE, nrows=10)
+		# filepath = internal@datafiles %>% filter(name == input$upload_name) %>% select(path) %>% unlist
+		filepath = internal@datafiles[[input$upload_name]]["path"] %>% unlist(use.names=FALSE)
+		tab = read.csv(filepath, header=FALSE, nrows=10)
 		nrows = nrow(tab)
 		ncolumns = ncol(tab)
 
@@ -705,13 +696,13 @@ server = function(input, output, session) {
 		# tab = rbind(tab, bottom)
 
 		colnames(tab) = 1:ncolumns
-		index = getDatafileIndex(internal, input$upload_name, "type")
+		# index = getDatafileIndex(internal, input$upload_name, "type")
 
 		output$upload_type_interface <- renderUI({
 			selectInput(inputId='upload_type',
 				label='Type',
 				choices=c("Artifact", "Source"),
-				selected=internal@datafiles[index,"type"]
+				selected=unlist(internal@datafiles[[input$upload_name]]["type"], use.names=FALSE)
 			)
 		})
 
@@ -719,16 +710,16 @@ server = function(input, output, session) {
 			selectInput(inputId='upload_sample_id_column',
 				label='Sample ID Column',
 				choices=c("None", colnames(tab)),
-				selected=internal@datafiles[index,"id"],
+				selected=unlist(internal@datafiles[[input$upload_name]]["id"], use.names=FALSE),
 				multiple=FALSE
 			)
 		})
 
-		output$upload_source_column_interface <- renderUI({
-			selectInput(inputId='upload_source_column',
+		output$upload_group_column_interface <- renderUI({
+			selectInput(inputId='upload_group_column',
 				label='Source Column',
 				choices=c("None", colnames(tab)),
-				selected=internal@datafiles[index,"source"],
+				selected=unlist(internal@datafiles[[input$upload_name]]["group"], use.names=FALSE),
 				multiple=FALSE
 			)
 		})
@@ -737,7 +728,7 @@ server = function(input, output, session) {
 			selectInput(inputId='upload_element_column',
 				label='Element Columns',
 				choices=colnames(tab),
-				selected=c(unlist(internal@datafiles[index,"element"], use.names=FALSE)),
+				selected=c(unlist(internal@datafiles[[input$upload_name]]["element"], use.names=FALSE)),
 				multiple=TRUE
 			)
 		})
@@ -746,7 +737,7 @@ server = function(input, output, session) {
 			selectInput(inputId='upload_note_column',
 				label='Note Column',
 				choices=c("None", colnames(tab)),
-				selected=internal@datafiles[index,"note"],
+				selected=unlist(internal@datafiles[[input$upload_name]]["note"], use.names=FALSE),
 				multiple=FALSE
 			)
 		})
@@ -755,7 +746,7 @@ server = function(input, output, session) {
 			radioButtons(inputId='upload_show',
 				label="Show in Plot",
 				choices=list("Yes", "No"),
-				selected=internal@datafiles[index,"show"],
+				selected=unlist(internal@datafiles[[input$upload_name]]["show"], use.names=FALSE),
 				inline=TRUE
 			)
 		})
@@ -797,9 +788,9 @@ server = function(input, output, session) {
 		}
 	})
 
-	observeEvent(input$upload_source_column, {
+	observeEvent(input$upload_group_column, {
 		if (!is.null(input$upload_name)) {
-			internal <<- setDatafileValue(internal, input$upload_name, "source", input$upload_source_column)
+			internal <<- setDatafileValue(internal, input$upload_name, "group", input$upload_group_column)
 		}
 	})
 
@@ -820,16 +811,9 @@ server = function(input, output, session) {
 			internal <<- setDatafileValue(internal, input$upload_name, "show", "Yes")
 			index = getPointIndex(fig, input$upload_name)
 			if (is.na(index)) { # Ensure the data is not present on the plot
-				index = getDatafileIndex(internal, input$upload_name, "name")
-				upload = internal@datafiles %>% filter(row_number() == index)
-				if (is.na(upload["element"])) { # Throw error notification and reset the option
-
-					shinyalert::shinyalert(title="Cannot Add to Plot",
-						text="No element columns selected",
-						type="error",
-						closeOnClickOutside=TRUE
-					)
-
+				element_columns = internal@datafiles[[input$upload_name]]["element"] %>% unlist(use.names=FALSE)
+				if (element_columns[1] == "None") { # Throw error notification and reset the option
+					shinyalert::shinyalert(title="Cannot Add to Plot", text="No element columns selected")
 					updateRadioButtons(session, inputId='upload_show',
 						label="Show in Plot",
 						choices=list("Yes", "No"),
@@ -859,7 +843,7 @@ server = function(input, output, session) {
 	# observeEvent(c(
 	# 	input$upload_sample_type,
 	# 	input$upload_sample_id_column,
-	# 	input$upload_source_column,
+	# 	input$upload_group_column,
 	# 	input$upload_element_column,
 	# 	input$upload_note_column
 	# ), {
@@ -895,14 +879,14 @@ server = function(input, output, session) {
 		input$upload_name,
 		input$upload_type,
 		input$upload_sample_id_column,
-		input$upload_source_column,
+		input$upload_group_column,
 		input$upload_element_column,
 		input$upload_note_column
 	), {
 		# print(glue("Upload Modal Selection: ", input$upload_name))
 		# print(glue("\tType: ", input$upload_format_type))
 		# print(glue("\tSample ID: ", input$upload_sample_id_column))
-		# print(glue("\tSource: ", input$upload_source_column))
+		# print(glue("\tSource: ", input$upload_group_column))
 		# if (length(input$upload_element_column) > 0) {
 		# 	print(glue("\tElements: ", paste(sort(input$upload_element_column), collapse=", ")))
 		# } else {

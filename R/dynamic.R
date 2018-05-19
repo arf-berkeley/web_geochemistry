@@ -26,7 +26,7 @@ DynamicData = setClass("DynamicData",
 		x="character",
 		y="character",
 		selection="data.frame",
-		datafiles="data.frame",
+		datafiles="list",
 		upload="list"
 	)#,
 	# prototype=list(
@@ -51,97 +51,119 @@ DynamicData = setClass("DynamicData",
 )
 
 
-setGeneric(name="addDatafile", function(self, df, source) {
-	standardGeneric("addDatafile")
-})
+############################################################
+#' Store and manipulate data from external files
+#'
+#' The Datafile family of functions is used to add external files,
+#' set the options for these files (see \strong{Note} below), store
+#' the data from the external files, and remove the file and data when
+#' necessary.
+#' 
+#' @note These functions are meant to store data from files uploaded by a user
+#'		and files pulled from external databases.
+#'
+#' @note Options include the filename (\emph{name}), the local file path (\emph{path}), the
+#'		column numbers for the data ids, grouping, elements, and notes
+#'		(\emph{id}, \emph{group}, \emph{element}, and \emph{note}, respectively), the type of data
+#'		(\emph{type}, either `Artifact' or `Source'), and whether or not to include
+#'		the data in the plot (\emph{show}, either `Yes' or `No').
+#'
+#' @name  DynamicData-Datafile
+#' @param self DynamicData object
+#' @param directory directory of characteristics/options for the external files
+#' @param src source of the external file (either `user' or `database')
+#' @param filename name of the external file used for looking it up in
+#'		the directory
+#' @param option option contained within the directory
+#' @param value specified value for the option
+NULL
+############################################################
+	#' @rdname DynamicData-Datafile
+	setGeneric(name="addDatafile", function(self, directory, src) {
+		standardGeneric("addDatafile")
+	})
 
-setMethod(f="addDatafile", signature="DynamicData", function(self, df, source) {
-	self@datafiles = rbind(self@datafiles, df)
-	return(self)
-})
+	setMethod(f="addDatafile", signature="DynamicData", function(self, directory, src) {
+		filename = unlist(directory["name"], use.names=FALSE)
+		options = directory %>% select(-name)
+		if (filename %in% names(self@datafiles)) {
+			print(glue("[WARN] {filename} already present in datafiles directory"))
+		} else {
+			self@datafiles[[filename]] = options
+		}
+		return(self)
+	})
 
-setGeneric(name="setDatafileValue", function(self, file, column, value) {
-	standardGeneric("setDatafileValue")
-})
+	#' @rdname DynamicData-Datafile
+	setGeneric(name="setDatafileValue", function(self, filename, option, value) {
+		standardGeneric("setDatafileValue")
+	})
 
-setMethod(f="setDatafileValue", signature="DynamicData", function(self, file, column, value) {
-	index = getDatafileIndex(self, file, column)
-	if (!is.na(index)) {
-		self@datafiles[index, column] = list(value)
-	} else {
-		print(glue("[WARN] <row> not present in datafiles"))
-	}
-	return(self)
-})
+	setMethod(f="setDatafileValue", signature="DynamicData", function(self, filename, option, value) {
+		if (option %in% colnames(self@datafiles[[filename]])) {
+			self@datafiles[[filename]][option] = list(value)
+		} else {
+			print(glue("[WARN] {option} not present in {filename} options"))
+		}
+		return(self)
+	})
 
-setGeneric(name="getDatafileIndex", function(self, file, column) {
-	standardGeneric("getDatafileIndex")
-})
+	#' @rdname DynamicData-Datafile
+	setGeneric(name="addDatafileData", function(self, filename) {
+		standardGeneric("addDatafileData")
+	})
 
-setMethod(f="getDatafileIndex", signature="DynamicData", function(self, file, column) {
-	if (column %in% colnames(self@datafiles)) {
-		row = self@datafiles %>% filter(name == file)
-		index = prodlim::row.match(row, self@datafiles, nomatch=NA)
-	} else {
-		index = NA
-		print(glue("[WARN] {column} not present in datafiles"))
-	}
-	return(index)
-})
+	setMethod(f="addDatafileData", signature="DynamicData", function(self, filename) {
+		options = self@datafiles[[filename]]
 
-setGeneric(name="addDatafileData", function(self, filename) {
-	standardGeneric("addDatafileData")
-})
+		### Determine which columns to extract from the uploaded data
+		columns = c()
+		if (!(options["id"][[1]] == "None")) {
+			columns = c(columns, unlist(options["id"], use.names=FALSE))
+		}
+		if (!(options["group"][[1]] == "None")) {
+			columns = c(columns, unlist(options["group"], use.names=FALSE))
+		}
+		if (!(options["element"][[1]] == "None")) {
+			columns = c(columns, unlist(options["element"], use.names=FALSE))
+		}
+		if (!(options["note"][[1]] == "None")) {
+			columns = c(columns, unlist(options["note"], use.names=FALSE))
+		}
 
-setMethod(f="addDatafileData", signature="DynamicData", function(self, filename) {
-	row = self@datafiles %>% filter(name == filename)
+		### Load the data and select the specified columns
+		filepath = options["path"] %>% unlist(use.names=FALSE)
+		data = read.csv(filepath, header=TRUE) %>% select(as.numeric(columns))
 
-	### Determine which columns to extract from the uploaded data
-	columns = c()
-	if (!(row["id"][[1]] == "None")) {
-		columns = c(columns, unlist(row["id"], use.names=FALSE))
-	}
-	if (!(row["source"][[1]] == "None")) {
-		columns = c(columns, unlist(row["source"], use.names=FALSE))
-	}
-	if (!(row["element"][[1]] == "None")) {
-		columns = c(columns, unlist(row["element"], use.names=FALSE))
-	}
-	if (!(row["note"][[1]] == "None")) {
-		columns = c(columns, unlist(row["note"], use.names=FALSE))
-	}
+		### Add basic columns if not present
+		if (options["id"][[1]] == "None") {
+			data[,"id"] = NA
+		}
+		if (options["note"][[1]] == "None") {
+			data[,"note"] = ""
+		}
 
-	### Load the data and select the specified columns
-	data = read.csv(row$path, header=TRUE) %>% select(as.numeric(columns))
+		### Standardize the column names
+		# elements = colnames(data) %>% select(as.numeric(options["element"]))
+		# names = c("id", "group", elements, "note")
+		# colnames(data) =  names
 
-	### Add basic columns if not present
-	if (row["id"][[1]] == "None") {
-		data[,"id"] = NA
-	}
-	if (row["note"][[1]] == "None") {
-		data[,"note"] = ""
-	}
+		### Append new data to the self@upload named list
+		self@upload[[filename]] = data
 
-	### Standardize the column names
-	# elements = colnames(data) %>% select(as.numeric(row["element"]))
-	# names = c("id", "group", elements, "note")
-	# colnames(data) =  names
+		return(self)
+	})
 
-	### Append new data to the self@upload named list
-	self@upload[[filename]] = data
+	#' @rdname DynamicData-Datafile
+	setGeneric(name="removeDatafileData", function(self, filename) {
+		standardGeneric("removeDatafileData")
+	})
 
-	return(self)
-})
-
-setGeneric(name="removeDatafileData", function(self, filename) {
-	standardGeneric("removeDatafileData")
-})
-
-setMethod(f="removeDatafileData", signature="DynamicData", function(self, filename) {
-	self@upload[[filename]] = NULL
-	return(self)
-})
-
+	setMethod(f="removeDatafileData", signature="DynamicData", function(self, filename) {
+		self@upload[[filename]] = NULL
+		return(self)
+	})
+############################################################
 
 ###########################################################
 #' Set the default data for the dynamic data.frame

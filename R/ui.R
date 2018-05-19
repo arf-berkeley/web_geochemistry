@@ -17,7 +17,7 @@ fixedPage(
 				"Learn about the tool", a("here", href='help.html', target='blank')
 			)
 		),
-		shinyBS::bsCollapse(id="sidepanel", open=c("Source Information", "File Management"), multiple=TRUE,
+		shinyBS::bsCollapse(id="sidepanel", open=c("Source Information", "Data Management"), multiple=TRUE,
 			shinyBS::bsCollapsePanel(title="Source Information", style="info",
 				selectInput(inputId='country',
 					label='Country (# Sources)',
@@ -50,15 +50,9 @@ fixedPage(
 				)
 			),
 
-			shinyBS::bsCollapsePanel(title="File Management", style="info",
-				tags$b("Upload data"),
+			shinyBS::bsCollapsePanel(title="Data Management", style="info",
 				tags$div(class="my-center",
 					actionButton("view_uploaded_files", "View uploaded files", class="my-btn"),
-					# radioButtons(inputId='upload_format_type',
-					# 	label=NA,
-					# 	choices=list("Source", "Artifact"),
-					# 	inline=TRUE
-					# ),
 					shinyBS::bsModal(id="upload_modal",
 						title="Change name",
 						trigger="view_uploaded_files",
@@ -69,61 +63,27 @@ fixedPage(
 						),
 						uiOutput("upload_type_interface"),
 						uiOutput("upload_sample_id_column_interface"),
-						uiOutput("upload_source_column_interface"),
+						uiOutput("upload_group_column_interface"),
 						uiOutput("upload_element_column_interface"),
 						uiOutput("upload_note_column_interface"),
 						uiOutput("upload_show_interface")
-					),
-					fileInput(inputId='upload_files',
-						label=NULL,
-						multiple=TRUE,
-						accept=c('text/csv',
-							'text/comma-separated-values,text/plain',
-							'.csv'
-						)
 					)
 				),
 
-				# tags$div(style="margin-bottom:16px;",
-				# 	conditionalPanel(
-				# 		# condition="typeof input.upload_files == 'object'",
-				# 		condition='typeof input["upload_files"] == "object"',
-				# 		# condition="input.upload_format_type == 'Source'",
-				# 		# condition='output["test"]',
-				# 		# 'true',
-				# 		# shinyBS::bsCollapsePanel(title="View uploaded files", style="default",
-				# 		# 	"Uploaded files go here!"
-				# 		# )
-				# 		actionButton("view_uploaded_files", "View uploaded files")
-				# 	)
-				# ),
-
-				tags$b("Download updated data"),
-				# tags$div(class="my-center",
-				fixedRow(
-					column(7,
-						tags$div(#sytle="display: inline-block;vertical-align:top",
-							# radioButtons(inputId='output_selection',
-							# 	label=NA,
-							# 	choices=list("CSV", "XLSX", "ODS"),
-							# 	inline=TRUE
-							# ),
-							downloadButton(outputId='x3',
-								label="Download", class="my-btn"
-							)
-						)
-					),
-					column(5,
-						tags$div(#sytle="display: inline-block;vertical-align:top",
-							selectInput(inputId="output_selection",
-								label=NA,
-								choices=c("CSV", "XLSX", "ODS"),
-								width="85px",
-							)
-						)
+				tags$b("Upload data"),
+				fileInput(inputId='upload_files',
+					label=NULL,
+					multiple=TRUE,
+					accept=c('text/csv',
+						'text/comma-separated-values,text/plain',
+						'.csv'
 					)
+				),
+
+				# tags$b("Download updated data"),
+				tags$div(class="my-center",
+					actionButton("download_table", "Download table", class="my-btn")
 				)
-				# )
 			),
 
 			shinyBS::bsCollapsePanel(title="Options", style="info",
