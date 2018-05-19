@@ -80,7 +80,7 @@ add_selected_points = function(data, plot) {
 
 #' @describeIn SomethingNew Add artifact points
 add_artifact_point = function(filename, data, plot) {
-	df = getDatafileData(data, filename) %>% select(SampleID, SiteID, data@x, data@y, note)
+	df = data@upload[[filename]] %>% select(SampleID, SiteID, data@x, data@y, note)
 
 	layer = geom_point(df, 
 		mapping=aes_string(x=data@x, y=data@y, color="SiteID"),
@@ -92,12 +92,21 @@ add_artifact_point = function(filename, data, plot) {
 	return(plot)
 }
 
-# #' @describeIn SomethingNew Remove the source points
-# remove_artifact_point = function(source, plot) {
-# 	# print(glue("\t[remove_source_point()] Remove source points {source}"))
-# 	plot = removePoint(plot, source)
-# 	return(plot)
-# }
+#' @describeIn SomethingNew Remove the source points
+remove_artifact_point = function(filename, plot) {
+	# print(glue("\t[remove_source_point()] Remove source points {source}"))
+	plot = removePoint(plot, filename)
+	return(plot)
+}
+
+##### My Wrappers for quick notifications (to make the code cleaner)
+showInfo = function(str, duration=3) {
+	showNotification(ui=str, type="message", duration=duration)
+}
+showWarn = function(str, duration=3) {
+	showNotification(ui=str, type="warning", duration=duration)
+}
+##########
 
 
 server = function(input, output, session) {
@@ -425,7 +434,6 @@ server = function(input, output, session) {
 		if (is.na(internal_index)) { ### Point hasn't been selected yet, so add it
 			print(glue("\tAdding new point to selection"))
 			internal <<- addSelection(internal, selection)
-			print(index)
 			### Jump to the new selection using JavaScript in 'interactive.js'
 			proxy %>% DT::selectRows(which(internal@df$ANID %in% internal@selection$ANID))
 			if (index > 3) {
@@ -600,11 +608,10 @@ server = function(input, output, session) {
 		colnames(df) = c("name", "path")
 		df["id"] = "None"
 		df["source"] = "None"
-		df["element"] = NA
+		df["element"] = "None"
 		df["note"] = "None"
 		df["type"] = "Artifact"
-		df["show"] = FALSE
-		df["pos"] = NA ### This may not be necessary
+		df["show"] = "No"
 		internal <<- addDatafile(internal, df, source="upload")
 
 		shinyBS::toggleModal(session,
@@ -745,15 +752,10 @@ server = function(input, output, session) {
 		})
 
 		output$upload_show_interface <- renderUI({
-			if (internal@datafiles[index,"show"]) {
-				show = "Yes"
-			} else {
-				show = "No"
-			}
 			radioButtons(inputId='upload_show',
 				label="Show in Plot",
 				choices=list("Yes", "No"),
-				selected=show,
+				selected=internal@datafiles[index,"show"],
 				inline=TRUE
 			)
 		})
@@ -814,71 +816,42 @@ server = function(input, output, session) {
 	})
 
 	observeEvent(input$upload_show, {
-		if (input$upload_show == "Yes") {
-			index = getDatafileIndex(internal, input$upload_name, "name")
-			upload = internal@datafiles %>% filter(row_number() == index)
+		if (input$upload_show == "Yes") { # Add the uploaded data to the internal data
+			internal <<- setDatafileValue(internal, input$upload_name, "show", "Yes")
+			index = getPointIndex(fig, input$upload_name)
+			if (is.na(index)) { # Ensure the data is not present on the plot
+				index = getDatafileIndex(internal, input$upload_name, "name")
+				upload = internal@datafiles %>% filter(row_number() == index)
+				if (is.na(upload["element"])) { # Throw error notification and reset the option
 
-			if (is.na(upload["element"])) {
-				# input$upload_show = "No"
-				# showModal(modalDialog(
-				# 	title="Cannot Add to Plot",
-				# 	size="s",
-				# 	easyClose=TRUE,
-				# 	"No element columns selected."
-				# ))
-				shinyalert::shinyalert(title="Cannot Add to Plot",
-					text="No element columns selected",
-					type="error",
-					closeOnClickOutside=TRUE
-				)
+					shinyalert::shinyalert(title="Cannot Add to Plot",
+						text="No element columns selected",
+						type="error",
+						closeOnClickOutside=TRUE
+					)
 
-				updateRadioButtons(session, inputId='upload_show',
-					label="Show in Plot",
-					choices=list("Yes", "No"),
-					selected="No",
-					inline=TRUE
-				)
-			} else {
-				showNotification(ui=glue("Adding {input$upload_name} to plot."),
-					type="message",
-					duration=3
-				)
+					updateRadioButtons(session, inputId='upload_show',
+						label="Show in Plot",
+						choices=list("Yes", "No"),
+						selected="No",
+						inline=TRUE
+					)
+				} else {
+					showInfo(glue("Adding {input$upload_name} to plot."))
+					internal <<- addDatafileData(internal, input$upload_name)
+					fig <<- add_artifact_point(input$upload_name, internal, fig)
+				}
 
-				internal <<- addDatafileData(internal, input$upload_name)
-				fig <<- add_artifact_point(input$upload_name, internal, fig)
-				print("***")
-				print(fig@point)
-				print(fig@path)
-				print(fig@layer)
-				print("")
-				print(internal@sources)
-				print("***")
+				# tab = read.csv(upload$path, header=TRUE)
+				# tab %>% select(as.numeric(upload$element[[1]]))
 			}
-
-			# tab = read.csv(upload$path, header=TRUE)
-			# # print(tab)
-			# # print("")
-			# # # print(upload)
-			# # # print(upload$element[[1]])
-			# # print(colnames(tab))
-			# # print("")
-			# tab %>% select(as.numeric(upload$element[[1]]))
-
-			# print("***Adding uploaded data")
-			# # print(internal@x)
-			# # print(internal@y)
-			# # print(colnames(tab))
-			# # print(data@x, data@y)
-			# layer = geom_point(tab,
-			# 		mapping=aes_string(x=internal@x, y=internal@y), 
-			# 		size=2,
-			# 		label=upload$name,
-			# 		color="blue",
-			# 		shape=17 # Solid triangle
-			# 	)
-			# fig = addPoint(fig, layer, "upload")
-			# fig <<- fig
-
+		} else { # Remove the uploaded data from the internal data
+			internal <<- setDatafileValue(internal, input$upload_name, "show", "No")
+			if (input$upload_name %in% names(internal@upload)) { # Ensure the data is present on the plot
+				showWarn(glue("Removing {input$upload_name} from plot."))
+				internal <<- removeDatafileData(internal, input$upload_name)
+				fig <<- remove_artifact_point(input$upload_name, fig)
+			}
 		}
 	})
 

@@ -114,38 +114,32 @@ setMethod(f="addDatafileData", signature="DynamicData", function(self, filename)
 	### Load the data and select the specified columns
 	data = read.csv(row$path, header=TRUE) %>% select(as.numeric(columns))
 
-	### Add basic columns if not present and standardize the column names
+	### Add basic columns if not present
 	if (row["id"][[1]] == "None") {
 		data[,"id"] = NA
 	}
 	if (row["note"][[1]] == "None") {
 		data[,"note"] = ""
 	}
+
+	### Standardize the column names
 	# elements = colnames(data) %>% select(as.numeric(row["element"]))
 	# names = c("id", "group", elements, "note")
 	# colnames(data) =  names
 
-	### Append this new data to the uploaded file data.frame list
-	### Note: the first elements stores an ordered list of the added files
-	if (length(self@upload) == 0) { # Initialize the list
-		self@upload[[1]] = c(filename)
-	} else { # Add to the list
-		self@upload[[1]] = c(self@upload[[1]], filename)
-	}
-	n = length(self@upload)
-	self@upload[[n+1]] = data
-	self = setDatafileValue(self, filename, "pos", n+1) # Track the position in self@datafiles
+	### Append new data to the self@upload named list
+	self@upload[[filename]] = data
 
 	return(self)
 })
 
-setGeneric(name="getDatafileData", function(self, filename) {
-	standardGeneric("getDatafileData")
+setGeneric(name="removeDatafileData", function(self, filename) {
+	standardGeneric("removeDatafileData")
 })
 
-setMethod(f="getDatafileData", signature="DynamicData", function(self, filename) {
-	position = match(filename, self@upload[[1]])
-	return(self@upload[[position+1]])
+setMethod(f="removeDatafileData", signature="DynamicData", function(self, filename) {
+	self@upload[[filename]] = NULL
+	return(self)
 })
 
 
@@ -285,7 +279,6 @@ setGeneric(name="addSelection", function(self, row) {
 
 setMethod(f="addSelection", signature="DynamicData", function(self, row){
 	self@selection = rbind(self@selection, row)
-	# print(nrow(self@selection))
 	return(self)
 })
 
