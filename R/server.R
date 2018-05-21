@@ -341,148 +341,56 @@ NULL
 		point = as.numeric(event[2])
 		x = as.numeric(event[3])
 		y = as.numeric(event[4])
-		print(glue("\n[observeEvent] plotly_click: curveNumber={curve} pointNumber={point} x={x} y={y}"))
 
 		### Determine the index of the selected point
-		print(colnames(internal@external))
-		print(paste(selected_x(), selected_y()))
 		index = which((internal@external[selected_x()] == x) & (internal@external[selected_y()] == y))
-		print(index)
 		### Extract the row corresponding to the selected point by its index
-		print(internal@external)
 		selected = internal@external %>% filter(row_number() == index)
-		print(selected)
 
-		### Check if the selected row is already present in the selection
+		# print(glue("\n[observeEvent] plotly_click: curveNumber={curve} pointNumber={point} x={x} y={y}"))
+		print(glue("\n[observeEvent] plotly_click: id={selected$id}"))
 		if (is.na(getSelectionIndex(internal, selected))) { ### Point hasn't been selected yet, so add it
-			print(glue("\tAdding {selected['id']} to selection"))
+			print(glue("\tAdding {selected$id} to selection"))
 			### Add the selected row internally and select the row within the table
 			internal <<- addSelection(internal, selected)
-			proxy %>% DT::selectRows(which(internal@external["id"] %in% internal@selection["id"]))
 			### Jump to the new selection using JavaScript in 'interactive.js'
-			ifelse(index>3, shinyjs::js$scroll(index-3), shinyjs::js$scroll(index))
+			if (index > 3) {
+				shinyjs::js$scroll(index-3)
+			} else {
+				shinyjs::js$scroll(index)
+			}
 		} else { ### Point is already present, so remove it
-			print(glue("\tRemoving {selected['id']} from selection"))
-			internal <<- removeSelection(internal, selection)
+			print(glue("\tRemoving {selected$id} from selection"))
+			internal <<- removeSelection(internal, selected)
 		}
+
+		proxy %>% DT::selectRows(which(unlist(internal@external["id"]) %in% unlist(internal@selection["id"])))
 	})
 
-	# observeEvent(c(
-	# 	input$table_rows_selected,
-	# 	plotly::event_data("plotly_click")
-	# ), {
-	# 	observe({
-	# 		print("Table row selected...")
-	# 		input$table_rows_selected
-	# 	})
-
-	# 	observe({
-	# 		print("Plot point selected...")
-	# 		plotly::event_data("plotly_click")
-	# 	})
-	# 	# "plotly_click" events provide a list of "curveNumber", "pointNumber", "x", and "y"
-	# 	click = plotly::event_data("plotly_click")
-	# 	layer_index = as.numeric(click[1])
-	# 	x = as.numeric(click[3])
-	# 	y = as.numeric(click[4])
-	# 	print(glue("\n[observeEvent] plotly_click: layer_index={layer_index} x={x} y={y}"))
-	# 	source = getLayer(fig, layer_index) ### Stores 'source' with "point" or "path" appended to it
-	# 	# print(fig@layer) ### Keep this here for debugging purposes
-	# 	# print(glue("\tSelected source: {source}"))
-	# 	index = grab_plot_point(internal@df, x, y)
-	# 	# fig@plot = fig@plot + 
-	# 	# 	geom_point(
-	# 	# 		data=internal@df[index,],
-	# 	# 		aes_string(x=selected_x(), y=selected_y(), fill="Source.Name"), 
-	# 	# 		size=2,
-	# 	# 		# label="Selected",
-	# 	# 		colour="black",
-	# 	# 		fill="red",
-	# 	# 		shape=21 # To get the outside border
-	# 	# 	)
-	# 	# fig@plot <<- fig@plot
-
-	# 	source = gsub("(.*)\\s\\w+", "\\1", source)
-	# 	# selection = internal@df %>% filter(Source.Name == source) %>% filter(internal@x == x)
-	# 	# print(selection)
-	# 	# print(internal@df[index,])
-	# 	selection = internal@df[index,]
-	# 	internal_index = getSelectionIndex(internal, selection)
-	# })
-
-	# observeEvent(input$table_rows_selected, {
-	# 	### This makes the table reactive to points being selected
-	# 	previous_selection = internal@selection
-	# 	current_indicies = input$table_rows_selected
-	# 	current_selection = internal@df %>% filter(row_number() %in% current_indicies)
-	# 	# data = internal@df %>% ungroup()
-	# 	# previous_indicies = getSelectionIndex(internal, input$table_rows_selected)
-	# 	print(previous_selection %>% select("ANID", internal@x, internal@y))
-	# 	print("")
-	# 	print(current_selection %>% select("ANID", internal@x, internal@y))
-	# 	# print(previous_indicies)
-
-	# 	# new_selection = previous_selection@selection[-index,]
-
-	# 	# selected_data = data %>% filter(row_number() %in% selection)
-	# 	# internal <<- addSelection(internal, selected_data)
-	# })
-
-	# observeEvent(input$table_rows_selected, {
-	# 	shinyjs::js$selected()
-	# 	print(glue("\n[observeEvent] table_rows_selected (running shinyjs.selected)"))
-	# 	### This makes the table reactive to points being selected
-	# 	# previous_selection = internal@selection
-	# 	# current_indicies = input$table_rows_selected
-	# 	# current_selection = internal@df %>% filter(row_number() %in% current_indicies)
-	# 	# data = internal@df %>% ungroup()
-	# 	# previous_indicies = getSelectionIndex(internal, input$table_rows_selected)
-	# 	# print(previous_selection %>% select("ANID", internal@x, internal@y))
-	# 	# print("")
-	# 	# print(current_selection %>% select("ANID", internal@x, internal@y))
-	# 	# print(previous_indicies)
-
-	# 	# new_selection = previous_selection@selection[-index,]
-
-	# 	# selected_data = data %>% filter(row_number() %in% selection)
-	# 	# internal <<- addSelection(internal, selected_data)
-	# })
-
-	# observeEvent(input$table_selection, {
-	# 	row = input$table_selection
-	# 	print(glue("\n[observeEvent] table_rows_selected (running shinyjs.selected)"))
-	# 	# print(glue("\t<{typeof(row)}> {row}"))
-	# 	selected = internal@external %>% filter(id == row[1])
-	# 	internal <<- addSelection(internal, selected)
-	# })
+	observeEvent(input$table_rows_selected, {
+		if (!(is.null(input$table_row_last_clicked))) { ### Prevent running if a row hasn't been selected yet
+			index = input$table_row_last_clicked
+			selected = internal@external %>% filter(row_number() == index)
+			print(glue("\n[observeEvent] table_rows_selected: id={selected$id}"))
+			if (is.na(getSelectionIndex(internal, selected))) { ### Point hasn't been selected yet, so add it
+				print(glue("\tAdding {selected$id} to selection"))
+				### Add the selected row internally and select the row within the table
+				internal <<- addSelection(internal, selected)
+			} else { ### Point is already present, so remove it
+				print(glue("\tRemoving {selected$id} from selection"))
+				internal <<- removeSelection(internal, selected)
+			}
+		}
+	### input$table_row_last_clicked is NULL when a row is deselected
+	### ignoreNULL=FALSE allows deselected rows to be determined
+	}, ignoreNULL=FALSE)
 
 	observeEvent(input$clear_selected, {
 		print(glue("\n[observeEvent] clear_selected"))
 		internal <<- clearSelection(internal)
 		proxy %>% DT::selectRows(which(internal@external["id"] %in% internal@selection["id"]))
 	})
-
-	# adjust_selection(data, selection) {
-	# 	index = getSelectionIndex(data, selection)
-	# 	if (is.na(index)) { ### Point hasn't been selected yet, so add it
-	# 		print(glue("\tAdding new point to selection"))
-	# 		data <<- addSelection(data, selection)
-
-	# 		### Jump to the new selection using JavaScript in 'interactive.js'
-	# 		proxy %>% DT::selectRows(which(data@df$ANID %in% data@selection$ANID))
-	# 		if (index > 3) {
-	# 			shinyjs::js$scroll(index-3)
-	# 		} else {
-	# 			shinyjs::js$scroll(index)
-	# 		}
-	# 	} else { ### Point is already present, so remove it
-	# 		print(glue("\tRemoving point from selection"))
-	# 		data <<- removeSelection(data, selection)
-	# 	}
-	# 	return(data)
-	# }
 ############################################################
-
 
 	toggle_source_points = observeEvent(input$show_source_points, {
 		print(glue("[observeEvent] toggle_source_points() - Toggle source points <{input$show_source_points}>"))
@@ -567,7 +475,8 @@ NULL
 			selectInput(inputId='upload_sample_id_column',
 				label='Sample ID Column',
 				choices=c("None", colnames(tab)),
-				selected=unlist(internal@datafiles[[input$upload_name]]["id"], use.names=FALSE),
+				# selected=unlist(internal@datafiles[[input$upload_name]]["id"], use.names=FALSE),
+				selected=c(1),
 				multiple=FALSE
 			)
 		})
@@ -576,7 +485,8 @@ NULL
 			selectInput(inputId='upload_group_column',
 				label='Source Column',
 				choices=c("None", colnames(tab)),
-				selected=unlist(internal@datafiles[[input$upload_name]]["group"], use.names=FALSE),
+				# selected=unlist(internal@datafiles[[input$upload_name]]["group"], use.names=FALSE),
+				selected=c(2),
 				multiple=FALSE
 			)
 		})
@@ -585,7 +495,8 @@ NULL
 			selectInput(inputId='upload_element_column',
 				label='Element Columns',
 				choices=colnames(tab),
-				selected=c(unlist(internal@datafiles[[input$upload_name]]["element"], use.names=FALSE)),
+				# selected=c(unlist(internal@datafiles[[input$upload_name]]["element"], use.names=FALSE)),
+				selected=c(3:12),
 				multiple=TRUE
 			)
 		})
@@ -755,7 +666,6 @@ NULL
 		# print(tab)
 
 		# print(available_elements)
-		print(paste(internal@x, internal@y))
 		# print(internal@external)
 		# test = data.frame(ID="test", Group="test", as.character(available_elements), Notes="Testing row_bind()")
 		# internal = addData(internal, test)
@@ -819,25 +729,25 @@ NULL
 			selected_y(),
 			input$show_source_points,
 			plotly::event_data("plotly_click"),
-			input$table_selection,
+			input$table_rows_selected,
 			input$clear_selected,
 			input$upload_show
 		), {
 			print(glue("[observeEvent] Update Plot"))
+			### Debug the various layers of the ggplot2 object (calling result() from 'dynamic.R')
+			print("*****")
+			result(fig)
+			print("*****")
+			##########
+
+			if (length(internal@selection) > 0) {
+				# print(internal@selection %>% select("ANID", internal@x, internal@y))
+				fig = add_selected_points(internal, fig)
+			}
+
+			fig@plot$labels$colour = NULL ### Removes the legend title!
+
 			output$plot = plotly::renderPlotly({
-				### Debug the various layers of the ggplot2 object (calling result() from 'dynamic.R')
-				# result(fig)
-				##########
-
-				if (length(internal@selection) > 0) {
-					# print(internal@selection %>% select("ANID", internal@x, internal@y))
-					fig = add_selected_points(internal, fig)
-				}
-
-				fig@plot$labels$colour = NULL ### Removes the legend title!
-
-				# print(str(fig@plot))
-
 				pfig = plotly::ggplotly(fig@plot,
 						tooltip=c("ID", "x", "y")
 					) %>%

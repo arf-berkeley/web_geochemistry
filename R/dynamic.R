@@ -319,25 +319,19 @@ NULL
 		data = read.csv(filepath, header=TRUE) %>% select(as.numeric(columns))
 
 		### Add basic columns if not present and standardize the names
-		print(paste(options["id"][[1]], options["group"][[1]], options["note"][[1]]))
+		# print(paste(options["id"][[1]], options["group"][[1]], options["note"][[1]]))
 		if (options["id"][[1]] == "None") {
 			data[,"id"] = NA
 		} else {
-			print("Changing id")
 			colnames(data)[as.numeric(options["id"][[1]])] = "id"
-			print("Done")
 		}
 		if (!(options["group"][[1]] == "None")) {
-			print("Changing group")
 			colnames(data)[as.numeric(options["group"][[1]])] = "group"
-			print("Done")
 		}
 		if (options["note"][[1]] == "None") {
 			data[,"note"] = character()
 		} else {
-			print("Changing note")
 			colnames(data)[as.numeric(options["note"][[1]])] = "note"
-			print("Done")
 		}
 
 		### Append new data to the self@upload named list
@@ -700,7 +694,7 @@ setMethod(f="getPathIndex", signature="DynamicPlot", function(self, id){
 result = function(self) {
 	cat(glue("Points ({length(self@point)}):"), paste(self@point, collapse=", "), "\n")
 	cat(glue("Paths ({length(self@path)}):"), paste(self@path, collapse=", "), "\n")
-	cat(glue("Layers ({length(self@layer)}):"), paste(self@layer, collapse=", "), "\n\n")
+	cat(glue("Layers ({length(self@layer)}):"), paste(self@layer, collapse=", "), "\n")
 }
 
 # label = "point1"
