@@ -115,7 +115,7 @@ fixedPage(
 		# 		fixedRow(DT::DTOutput("table"))
 		# 	)
 		# )
-		# fixedRow(DT::DTOutput("table")),
+		fixedRow(DT::DTOutput("table")),
 		# tags$div(#id="mine", style="border: 1px solid black;width:200px;",
 		actionButton("clear_selected", "Clear selected")
 		# ),

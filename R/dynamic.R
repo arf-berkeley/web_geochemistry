@@ -1,7 +1,7 @@
 print("*** Loading dynamic.R")
 
 source("config.R")
-data = read.csv("data/obsidian-NAA-database.csv")
+data = read.csv("data/MURR-NAA.csv")
 
 library("dplyr")
 library("glue")
@@ -20,6 +20,7 @@ library("ggplot2") # Used by DynamicPlot
 DynamicData = setClass("DynamicData",
 	slots = c(
 		df="data.frame",
+		external="data.frame",
 		country="character",
 		sources="character",
 		last_source="character",
@@ -50,6 +51,188 @@ DynamicData = setClass("DynamicData",
 	# }
 )
 
+###########################################################
+#' Set the default data for the dynamic data.frame
+#'
+#'
+#' @param self The DynamicData() object
+#' @param data A data.frame containing the default data
+#' @return The updated DynamicData() object
+setGeneric(name="setDefault", function(self, data) {
+	standardGeneric("setDefault")
+})
+
+#// #//' @rdname DynamicData-methods
+setMethod(f="setDefault",
+	signature="DynamicData",
+	definition=function(self, data) {
+		self@df = data
+		return(self)
+	}
+)
+
+	setGeneric(name="addData", function(self, df) {
+		standardGeneric("addData")
+	})
+
+	setMethod(f="addData", signature="DynamicData", function(self, df) {
+		self@external = dplyr::bind_rows(self@external, df)
+		# print(self@external)
+		return(self)
+	})
+
+#' Set the current country for the dynamic data.frame
+#'
+#' @param self The DynamicData() object
+#' @param country A string of the current country
+#' @return The updated DynamicData() object
+setGeneric(name="setCountry",
+	def=function(self, country) {
+		standardGeneric("setCountry")
+	}
+)
+
+#// #//' @rdname DynamicData-methods
+setMethod(f="setCountry",
+	signature="DynamicData",
+	definition=function(self, country) {
+		self@country = country
+		self@df = data %>% filter(Site.Country == self@country)
+		self@selection = data.frame()
+		return(self)
+	}
+)
+
+setGeneric(name="setSources",
+	def=function(self, source_list){
+		standardGeneric("setSources")
+	}
+)
+
+setMethod(f="setSources",
+	signature="DynamicData",
+	definition=function(self, source_list){
+		self@sources = source_list
+		self@df = self@df %>% filter(Source.Name %in% self@sources)
+		return(self)
+	}
+)
+
+setGeneric(name="addSource",
+	def=function(self, source){
+		standardGeneric("addSource")
+	}
+)
+
+setMethod(f="addSource",
+	signature="DynamicData",
+	definition=function(self, source){
+		self@sources = c(self@sources, source)
+		self@df = self@df %>% rbind(filter(data, Source.Name == source))
+		self@last_source = source
+		return(self)
+	}
+)
+
+setGeneric(name="removeSource",
+	def=function(self, source){
+		standardGeneric("removeSource")
+	}
+)
+
+setMethod(f="removeSource",
+	signature="DynamicData",
+	definition=function(self, source){
+		self@sources = self@sources[self@sources != source]
+		self@df = self@df %>% filter(Source.Name != source)
+		self@last_source = source
+		return(self)
+	}
+)
+
+setGeneric(name="getSources",
+	def=function(self){
+		standardGeneric("getSources")
+	}
+)
+
+setMethod(f="getSources",
+	signature="DynamicData",
+	definition=function(self){
+		return(self@sources)
+	}
+)
+
+setGeneric(name="setx",
+	def=function(self, x){
+		standardGeneric("setx")
+	}
+)
+
+setMethod(f="setx",
+	signature="DynamicData",
+	definition=function(self, x){
+		self@x = x
+		return(self)
+	}
+)
+
+setGeneric(name="sety",
+	def=function(self, y){
+		standardGeneric("sety")
+	}
+)
+
+setMethod(f="sety",
+	signature="DynamicData",
+	definition=function(self, y){
+		self@y = y
+		return(self)
+	}
+)
+
+
+
+setGeneric(name="addSelection", function(self, row) {
+	standardGeneric("addSelection")
+})
+
+setMethod(f="addSelection", signature="DynamicData", function(self, row){
+	self@selection = rbind(self@selection, row)
+	return(self)
+})
+
+setGeneric(name="removeSelection", function(self, row) {
+	standardGeneric("removeSelection")
+})
+
+setMethod(f="removeSelection", signature="DynamicData", function(self, row){
+	index = getSelectionIndex(self, row)
+	if (!is.na(index)) {
+		self@selection = self@selection[-index,]
+		rownames(self@selection) = NULL ### Re-indexes the rows after removing one
+	} else {
+		print(glue("[WARN] <row> not present in selection"))
+	}
+	return(self)
+})
+
+setGeneric(name="getSelectionIndex", function(self, row) {
+	standardGeneric("getSelectionIndex")
+})
+
+setMethod(f="getSelectionIndex", signature="DynamicData", function(self, row){
+	return(prodlim::row.match(row, self@selection, nomatch=NA))
+})
+
+setGeneric(name="clearSelection", function(self) {
+	standardGeneric("clearSelection")
+})
+
+setMethod(f="clearSelection", signature="DynamicData", function(self){
+	self@selection = data.frame()
+	return(self)
+})
 
 ############################################################
 #' Store and manipulate data from external files
@@ -164,177 +347,6 @@ NULL
 		return(self)
 	})
 ############################################################
-
-###########################################################
-#' Set the default data for the dynamic data.frame
-#'
-#'
-#' @param self The DynamicData() object
-#' @param data A data.frame containing the default data
-#' @return The updated DynamicData() object
-setGeneric(name="setDefault", function(self, data) {
-	standardGeneric("setDefault")
-})
-
-#// #//' @rdname DynamicData-methods
-setMethod(f="setDefault",
-	signature="DynamicData",
-	definition=function(self, data) {
-		self@df = data
-		return(self)
-	}
-)
-
-#' Set the current country for the dynamic data.frame
-#'
-#' @param self The DynamicData() object
-#' @param country A string of the current country
-#' @return The updated DynamicData() object
-setGeneric(name="setCountry",
-	def=function(self, country) {
-		standardGeneric("setCountry")
-	}
-)
-
-#// #//' @rdname DynamicData-methods
-setMethod(f="setCountry",
-	signature="DynamicData",
-	definition=function(self, country) {
-		self@country = country
-		self@df = data %>% filter(Site.Country == self@country)
-		self@selection = data.frame()
-		return(self)
-	}
-)
-
-setGeneric(name="setSources",
-	def=function(self, source_list){
-		standardGeneric("setSources")
-	}
-)
-
-setMethod(f="setSources",
-	signature="DynamicData",
-	definition=function(self, source_list){
-		self@sources = source_list
-		self@df = self@df %>% filter(Source.Name %in% self@sources)
-		return(self)
-	}
-)
-
-setGeneric(name="addSource",
-	def=function(self, source){
-		standardGeneric("addSource")
-	}
-)
-
-setMethod(f="addSource",
-	signature="DynamicData",
-	definition=function(self, source){
-		self@sources = c(self@sources, source)
-		self@df = self@df %>% rbind(filter(data, Source.Name == source))
-		self@last_source = source
-		return(self)
-	}
-)
-
-setGeneric(name="removeSource",
-	def=function(self, source){
-		standardGeneric("removeSource")
-	}
-)
-
-setMethod(f="removeSource",
-	signature="DynamicData",
-	definition=function(self, source){
-		self@sources = self@sources[self@sources != source]
-		self@df = self@df %>% filter(Source.Name != source)
-		self@last_source = source
-		return(self)
-	}
-)
-
-setGeneric(name="getSources",
-	def=function(self){
-		standardGeneric("getSources")
-	}
-)
-
-setMethod(f="getSources",
-	signature="DynamicData",
-	definition=function(self){
-		return(self@sources)
-	}
-)
-
-setGeneric(name="setx",
-	def=function(self, x){
-		standardGeneric("setx")
-	}
-)
-
-setMethod(f="setx",
-	signature="DynamicData",
-	definition=function(self, x){
-		self@x = x
-		return(self)
-	}
-)
-
-setGeneric(name="sety",
-	def=function(self, y){
-		standardGeneric("sety")
-	}
-)
-
-setMethod(f="sety",
-	signature="DynamicData",
-	definition=function(self, y){
-		self@y = y
-		return(self)
-	}
-)
-
-setGeneric(name="addSelection", function(self, row) {
-	standardGeneric("addSelection")
-})
-
-setMethod(f="addSelection", signature="DynamicData", function(self, row){
-	self@selection = rbind(self@selection, row)
-	return(self)
-})
-
-setGeneric(name="removeSelection", function(self, row) {
-	standardGeneric("removeSelection")
-})
-
-setMethod(f="removeSelection", signature="DynamicData", function(self, row){
-	index = getSelectionIndex(self, row)
-	if (!is.na(index)) {
-		self@selection = self@selection[-index,]
-		rownames(self@selection) = NULL ### Re-indexes the rows after removing one
-	} else {
-		print(glue("[WARN] <row> not present in selection"))
-	}
-	return(self)
-})
-
-setGeneric(name="getSelectionIndex", function(self, row) {
-	standardGeneric("getSelectionIndex")
-})
-
-setMethod(f="getSelectionIndex", signature="DynamicData", function(self, row){
-	return(prodlim::row.match(row, self@selection, nomatch=NA))
-})
-
-setGeneric(name="clearSelection", function(self) {
-	standardGeneric("clearSelection")
-})
-
-setMethod(f="clearSelection", signature="DynamicData", function(self){
-	self@selection = data.frame()
-	return(self)
-})
 
 
 ############################################################

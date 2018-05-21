@@ -26,7 +26,7 @@ my_sidepanel_style="margin:0px 0px 5px;border-radius:5px;padding:2px 10px 4px;ba
 my_sidepanel_style=glue::glue(my_sidepanel_style)
 
 ### Source the data when the session begins (occurs for both ui.R and server.R)
-data = read.csv("data/obsidian-NAA-database.csv")
+data = read.csv("data/MURR-NAA.csv")
 
 vectorof_count_labels = function(df) {
 	# Used for string formating of labels for both source country and source displayed in 'ui.R'

@@ -15,7 +15,7 @@ add_source_ellipse = function(source, data, plot, plot_points=FALSE) {
 	# print(glue("\t[add_source_ellipse()] Add source ellipse {source}"))
 	df = data@df %>% 
 		filter(Source.Name == source) %>% 
-		select(ANID, data@x, data@y, Source.Name)
+		select(ID, data@x, data@y, Source.Name)
 
 	layer = stat_ellipse(df,
 			mapping=aes_string(x=data@x, y=data@y, color="Source.Name"),
@@ -46,7 +46,7 @@ add_source_point = function(source, data, plot) {
 
 	df = data@df %>%
 		filter(Source.Name == source) %>%
-		select(ANID, data@x, data@y, Source.Name)
+		select(ID, data@x, data@y, Source.Name)
 
 	layer = geom_point(df, 
 		mapping=aes_string(x=data@x, y=data@y, color="Source.Name"),
@@ -406,13 +406,13 @@ server = function(input, output, session) {
 	observeEvent(input$table_selection, {
 		row = input$table_selection
 		# print(glue("\t<{typeof(row)}> {row}"))
-		selected = data %>% filter(ANID == row[1])
+		selected = internal@external %>% filter(ID == row[1])
 		internal <<- addSelection(internal, selected)
 	})
 
 	observeEvent(input$clear_selected, {
 		internal <<- clearSelection(internal)
-		proxy %>% DT::selectRows(which(internal@df$ANID %in% internal@selection$ANID))
+		proxy %>% DT::selectRows(which(internal@external$ID %in% internal@selection$ID))
 	})
 
 	# table_selected = reactive({
@@ -428,8 +428,8 @@ server = function(input, output, session) {
 		y = as.numeric(click[4])
 		print(glue("\n[observeEvent] plotly_click: layer_index={layer_index} x={x} y={y}"))
 
-		index = grab_plot_point(internal@df, x, y)
-		selection = internal@df[index,]
+		index = grab_plot_point(internal@external, x, y)
+		selection = internal@external[index,]
 		# internal <<- adjust_selection(internal, selection)
 		# print(selection)
 
@@ -438,7 +438,7 @@ server = function(input, output, session) {
 			print(glue("\tAdding new point to selection"))
 			internal <<- addSelection(internal, selection)
 			### Jump to the new selection using JavaScript in 'interactive.js'
-			proxy %>% DT::selectRows(which(internal@df$ANID %in% internal@selection$ANID))
+			proxy %>% DT::selectRows(which(internal@external$ID %in% internal@selection$ID))
 			if (index > 3) {
 				shinyjs::js$scroll(index-3)
 			} else {
@@ -496,64 +496,6 @@ server = function(input, output, session) {
 		}
 	})
 
-
-
-
-	#### Create the table
-	### https://shiny.rstudio.com/articles/datatables.html
-	### https://rstudio.github.io/DT/shiny.html
-	## DT::renderDataTable() takes an expression that returns a rectangular data object with column names, such as a data frame or a matrix.
-	updatePlot = observeEvent(c(
-		selected_country(),
-		selected_x(),
-		selected_y(),
-		selected_sources()
-	), {
-		output$table <- DT::renderDT({
-			available_elements = elements[elements %in% colnames(tab)]
-			tab = tab %>% select(ANID, Source.Name, as.character(available_elements), NKT_edits)
-
-			DT::datatable(tab,
-				class="compact hover cell-border",
-				colnames=c("ID", "Source Name", as.character(available_elements), "Notes"),
-				rownames=FALSE,
-				# filter="top",
-				### https://rstudio.github.io/DT/extensions.html#scroller
-				extensions="Scroller",
-				# escape=FALSE,
-				options=list(
-					dom='fti',
-					columnDefs=list(
-						list(width='1px', targets=c(0)),
-						list(width='150px', targets=c(1)),
-						list(width='200px', targets=c(-1)),
-						# list(width='50px', targets=c(1,2)),
-						# list(width='200px', targets=c(3))
-						list(className="dt-center", targets="_all")
-					),
-					# autoWidth=TRUE,
-					sScrollX="100%",
-					scrollX=TRUE,
-					scrollY=360,
-					deferRender=TRUE,
-					# scrollCollapse=TRUE,
-					scroller=TRUE,
-					# animate=FALSE, ### Scroller animation
-					# paging=FALSE,
-					# pageLength=-1,
-					### 'fixedHeader' is not working and is likely a bug
-					### https://github.com/rstudio/DT/issues/389
-					# fixedHeader=TRUE,
-					select=TRUE
-				),
-				editable=TRUE
-			) %>% DT::formatStyle(
-				c(internal@x, internal@y),
-				# target='column',
-				backgroundColor="#F6F6F6"
-			)
-		})
-	})
 
 	### https://rstudio.github.io/DT/shiny.html#manipulate-an-existing-datatables-instance
 	proxy = DT::dataTableProxy('table')
@@ -823,11 +765,10 @@ server = function(input, output, session) {
 				} else {
 					showInfo(glue("Adding {input$upload_name} to plot."))
 					internal <<- addDatafileData(internal, input$upload_name)
+					internal <<- addData(internal, internal@upload[[input$upload_name]])
 					fig <<- add_artifact_point(input$upload_name, internal, fig)
 				}
 
-				# tab = read.csv(upload$path, header=TRUE)
-				# tab %>% select(as.numeric(upload$element[[1]]))
 			}
 		} else { # Remove the uploaded data from the internal data
 			internal <<- setDatafileValue(internal, input$upload_name, "show", "No")
@@ -899,6 +840,97 @@ server = function(input, output, session) {
 
 
 
+	#### Create the table
+	### https://shiny.rstudio.com/articles/datatables.html
+	### https://rstudio.github.io/DT/shiny.html
+	## DT::renderDataTable() takes an expression that returns a rectangular data object with column names, such as a data frame or a matrix.
+	updatePlot = observeEvent(c(
+		selected_country(),
+		selected_x(),
+		selected_y(),
+		selected_sources(),
+		input$upload_show,
+		input$show_source_points
+	), {
+		available_elements = unlist(elements, use.names=FALSE)
+
+		tab = data.frame()
+		tab["ID"] = character()
+		tab["Group"] = character()
+		tab[internal@x] = character()
+		tab[internal@y] = character()
+		tab["Notes"] = character()
+
+		if (nrow(internal@external) > 0) {
+			tab = internal@external
+			n = ncol(tab)
+			element_names = colnames(tab)[3:(n-1)]
+			# print(element_names)
+			colnames(tab) = c("ID", "Group", as.character(element_names), "Notes")
+		}
+
+		# if (input$include_source_data) {
+		# 	print(colnames(internal@df))
+		# 	# itab = internal@df %>% select(ID, Source.Name, as.character(available_elements), Notes)
+		# 	colnames(itab) = c("ID", "Group", as.character(available_elements), "Notes")
+		# 	tab = row_bind(tab, itab)
+		# }
+		# print(tab)
+
+		# print(available_elements)
+		print(paste(internal@x, internal@y))
+		# print(internal@external)
+		# test = data.frame(ID="test", Group="test", as.character(available_elements), Notes="Testing row_bind()")
+		# internal = addData(internal, test)
+
+		output$table <- DT::renderDT({
+			DT::datatable(tab,
+				class="compact hover cell-border",
+				# colnames=c("ID", "Group", as.character(available_elements), "Notes"),
+				# rownames=FALSE,
+				# filter="top",
+				extensions="Scroller", ### https://rstudio.github.io/DT/extensions.html#scroller
+				# escape=FALSE,
+				options=list(
+					dom='tf',
+					columnDefs=list(
+						list(className="dt-center", targets="_all"),
+						list(targets=c(0:1,(-1)), searchable=FALSE),
+						list(width='1px', targets=c(0)),
+						list(width='150px', targets=c(1)),
+						list(width='200px', targets=c(-1))
+					),
+					# autoWidth=TRUE,
+					sScrollX="100%",
+					scrollX=TRUE,
+					scrollY=360,
+					scrollCollapse=TRUE, # Allows the table to be <= 'scrollY' height
+					deferRender=TRUE,
+					# scrollCollapse=TRUE,
+					scroller=TRUE,
+					# animate=FALSE, ### Scroller animation
+					# paging=FALSE,
+					# pageLength=-1,
+					### 'fixedHeader' is not working and is likely a bug
+					### https://github.com/rstudio/DT/issues/389
+					# fixedHeader=TRUE,
+					select=TRUE,
+					language=list(
+						zeroRecords="No data to display - Add data through Data Management"
+					)
+				),
+				editable=TRUE,
+				### This callback function fixes the "scrollCollapse" option of "Scroller" from not loading data
+				### Fix found here: https://github.com/rstudio/DT/issues/371#issuecomment-368324884
+				callback = JS("setTimeout(function() { table.draw(true); }, 500);")
+			) %>% DT::formatStyle(
+				c(internal@x, internal@y),
+				# target='column',
+				backgroundColor="#F6F6F6"
+			)
+		})
+	})
+
 
 
 	updatePlot = observeEvent(c(
@@ -928,7 +960,7 @@ server = function(input, output, session) {
 				# print(str(fig@plot))
 
 				pfig = plotly::ggplotly(fig@plot,
-						tooltip=c("ANID", "x", "y")
+						tooltip=c("ID", "x", "y")
 					) %>%
 					plotly::layout(
 						margin=list(t=50),
