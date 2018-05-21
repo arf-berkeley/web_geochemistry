@@ -318,18 +318,27 @@ NULL
 		filepath = options["path"] %>% unlist(use.names=FALSE)
 		data = read.csv(filepath, header=TRUE) %>% select(as.numeric(columns))
 
-		### Add basic columns if not present
+		### Add basic columns if not present and standardize the names
+		print(paste(options["id"][[1]], options["group"][[1]], options["note"][[1]]))
 		if (options["id"][[1]] == "None") {
 			data[,"id"] = NA
+		} else {
+			print("Changing id")
+			colnames(data)[as.numeric(options["id"][[1]])] = "id"
+			print("Done")
+		}
+		if (!(options["group"][[1]] == "None")) {
+			print("Changing group")
+			colnames(data)[as.numeric(options["group"][[1]])] = "group"
+			print("Done")
 		}
 		if (options["note"][[1]] == "None") {
-			data[,"note"] = ""
+			data[,"note"] = character()
+		} else {
+			print("Changing note")
+			colnames(data)[as.numeric(options["note"][[1]])] = "note"
+			print("Done")
 		}
-
-		### Standardize the column names
-		# elements = colnames(data) %>% select(as.numeric(options["element"]))
-		# names = c("id", "group", elements, "note")
-		# colnames(data) =  names
 
 		### Append new data to the self@upload named list
 		self@upload[[filename]] = data

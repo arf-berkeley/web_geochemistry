@@ -80,10 +80,10 @@ add_selected_points = function(data, plot) {
 
 #' @describeIn SomethingNew Add artifact points
 add_artifact_point = function(filename, data, plot) {
-	df = data@upload[[filename]] %>% select(SampleID, SiteID, data@x, data@y, note)
+	df = data@upload[[filename]] %>% select(id, group, data@x, data@y, note)
 
 	layer = geom_point(df, 
-		mapping=aes_string(x=data@x, y=data@y, color="SiteID"),
+		mapping=aes_string(x=data@x, y=data@y, color="group"),
 		inherit.aes=FALSE,
 		shape=17 # Solid triangle
 	)
@@ -100,17 +100,16 @@ remove_artifact_point = function(filename, plot) {
 }
 
 ##### My Wrappers for quick notifications (to make the code cleaner)
-showInfo = function(str, duration=3) {
-	showNotification(ui=str, type="message", duration=duration)
-}
-showWarn = function(str, duration=3) {
-	showNotification(ui=str, type="warning", duration=duration)
-}
-showAlert = function(title, text) {
-	shinyalert::shinyalert(title, text,	type="error", closeOnClickOutside=TRUE)
-}
+	showInfo = function(str, duration=3) {
+		showNotification(ui=str, type="message", duration=duration)
+	}
+	showWarn = function(str, duration=3) {
+		showNotification(ui=str, type="warning", duration=duration)
+	}
+	showAlert = function(title, text) {
+		shinyalert::shinyalert(title, text,	type="error", closeOnClickOutside=TRUE)
+	}
 ##########
-
 
 server = function(input, output, session) {
 	shinyjs::showLog()
@@ -306,38 +305,67 @@ server = function(input, output, session) {
 		return(internal@y)
 	})
 
-	# add_uploaded_points = reactive({
-	# 	# scale_shape_identity(2)
-	# 	# guides(alpha=FALSE) +
-	# 	# scale_color_discrete()
 
-	# 	# if (input$plot_artifact_ellipses) {
-	# 	# 	p = p +
-	# 	# 		stat_ellipse(data=upload,
-	# 	# 			aes(x=X, y=Y,
-	# 	# 				group=SiteID,
-	# 	# 				color=factor(SiteID, labels=paste("Site", unique(SiteID))
-	# 	# 				)
-	# 	# 			)
-	# 	# 		)
-	# 	# }
+############################################################
+#' Store and manipulate data from external files
+#'
+#' The Datafile family of functions is used to add external files,
+#' set the options for these files (see \strong{Note} below), store
+#' the data from the external files, and remove the file and data when
+#' necessary.
+#' 
+#' @note These functions are meant to store data from files uploaded by a user
+#'		and files pulled from external databases.
+#'
+#' @note Options include the filename (\emph{name}), the local file path (\emph{path}), the
+#'		column numbers for the data ids, grouping, elements, and notes
+#'		(\emph{id}, \emph{group}, \emph{element}, and \emph{note}, respectively), the type of data
+#'		(\emph{type}, either `Artifact' or `Source'), and whether or not to include
+#'		the data in the plot (\emph{show}, either `Yes' or `No').
+#'
+#' @name  DynamicData-Datafile
+#' @param self DynamicData object
+#' @param directory directory of characteristics/options for the external files
+#' @param src source of the external file (either `user' or `database')
+#' @param filename name of the external file used for looking it up in
+#'		the directory
+#' @param option option contained within the directory
+#' @param value specified value for the option
+NULL
+############################################################
+	### "plotly_click" events provide a list of "curveNumber", "pointNumber", "x", and "y"
+	observeEvent(plotly::event_data("plotly_click"), {
+		### Parse the "plotly_click" event
+		event = plotly::event_data("plotly_click")
+		curve = as.numeric(event[1])
+		point = as.numeric(event[2])
+		x = as.numeric(event[3])
+		y = as.numeric(event[4])
+		print(glue("\n[observeEvent] plotly_click: curveNumber={curve} pointNumber={point} x={x} y={y}"))
 
-	# 	# if (input$plot_artifact_labels) {
-	# 	# 	p = p + geom_text(data = upload,
-	# 	# 	mapping = aes(x = X, y = Y, group = SiteID,
-	# 	# 	color = factor(SiteID),
-	# 	# 	label = SampleID),
-	# 	# 	check_overlap = T, size = 2.5, show.legend = F)
-	# 	# }
-	# })
+		### Determine the index of the selected point
+		print(colnames(internal@external))
+		print(paste(selected_x(), selected_y()))
+		index = which((internal@external[selected_x()] == x) & (internal@external[selected_y()] == y))
+		print(index)
+		### Extract the row corresponding to the selected point by its index
+		print(internal@external)
+		selected = internal@external %>% filter(row_number() == index)
+		print(selected)
 
-
-
-
-	# 'function() {
-	# 		# $(this.api().table().row(20).node()).addClass("selected");
-	# 		# this.api().table().row(20).scrollTo();
-	# 		alert("scrolled");}'
+		### Check if the selected row is already present in the selection
+		if (is.na(getSelectionIndex(internal, selected))) { ### Point hasn't been selected yet, so add it
+			print(glue("\tAdding {selected['id']} to selection"))
+			### Add the selected row internally and select the row within the table
+			internal <<- addSelection(internal, selected)
+			proxy %>% DT::selectRows(which(internal@external["id"] %in% internal@selection["id"]))
+			### Jump to the new selection using JavaScript in 'interactive.js'
+			ifelse(index>3, shinyjs::js$scroll(index-3), shinyjs::js$scroll(index))
+		} else { ### Point is already present, so remove it
+			print(glue("\tRemoving {selected['id']} from selection"))
+			internal <<- removeSelection(internal, selection)
+		}
+	})
 
 	# observeEvent(c(
 	# 	input$table_rows_selected,
@@ -382,72 +410,56 @@ server = function(input, output, session) {
 	# 	internal_index = getSelectionIndex(internal, selection)
 	# })
 
-	observeEvent(input$table_rows_selected, {
-		# shinyjs::js$selected(1)
-		shinyjs::js$selected()
-		print(glue("\n[observeEvent] table_rows_selected"))
-		### This makes the table reactive to points being selected
-		# previous_selection = internal@selection
-		# current_indicies = input$table_rows_selected
-		# current_selection = internal@df %>% filter(row_number() %in% current_indicies)
-		# data = internal@df %>% ungroup()
-		# previous_indicies = getSelectionIndex(internal, input$table_rows_selected)
-		# print(previous_selection %>% select("ANID", internal@x, internal@y))
-		# print("")
-		# print(current_selection %>% select("ANID", internal@x, internal@y))
-		# print(previous_indicies)
+	# observeEvent(input$table_rows_selected, {
+	# 	### This makes the table reactive to points being selected
+	# 	previous_selection = internal@selection
+	# 	current_indicies = input$table_rows_selected
+	# 	current_selection = internal@df %>% filter(row_number() %in% current_indicies)
+	# 	# data = internal@df %>% ungroup()
+	# 	# previous_indicies = getSelectionIndex(internal, input$table_rows_selected)
+	# 	print(previous_selection %>% select("ANID", internal@x, internal@y))
+	# 	print("")
+	# 	print(current_selection %>% select("ANID", internal@x, internal@y))
+	# 	# print(previous_indicies)
 
-		# new_selection = previous_selection@selection[-index,]
+	# 	# new_selection = previous_selection@selection[-index,]
 
-		# selected_data = data %>% filter(row_number() %in% selection)
-		# internal <<- addSelection(internal, selected_data)
-	})
-
-	observeEvent(input$table_selection, {
-		row = input$table_selection
-		# print(glue("\t<{typeof(row)}> {row}"))
-		selected = internal@external %>% filter(ID == row[1])
-		internal <<- addSelection(internal, selected)
-	})
-
-	observeEvent(input$clear_selected, {
-		internal <<- clearSelection(internal)
-		proxy %>% DT::selectRows(which(internal@external$ID %in% internal@selection$ID))
-	})
-
-	# table_selected = reactive({
-	# 	test = input$table_selection
-	# 	return(test)
+	# 	# selected_data = data %>% filter(row_number() %in% selection)
+	# 	# internal <<- addSelection(internal, selected_data)
 	# })
 
-	### "plotly_click" events provide a list of "curveNumber", "pointNumber", "x", and "y"
-	observeEvent(plotly::event_data("plotly_click"), {
-		click = plotly::event_data("plotly_click")
-		layer_index = as.numeric(click[1])
-		x = as.numeric(click[3])
-		y = as.numeric(click[4])
-		print(glue("\n[observeEvent] plotly_click: layer_index={layer_index} x={x} y={y}"))
+	# observeEvent(input$table_rows_selected, {
+	# 	shinyjs::js$selected()
+	# 	print(glue("\n[observeEvent] table_rows_selected (running shinyjs.selected)"))
+	# 	### This makes the table reactive to points being selected
+	# 	# previous_selection = internal@selection
+	# 	# current_indicies = input$table_rows_selected
+	# 	# current_selection = internal@df %>% filter(row_number() %in% current_indicies)
+	# 	# data = internal@df %>% ungroup()
+	# 	# previous_indicies = getSelectionIndex(internal, input$table_rows_selected)
+	# 	# print(previous_selection %>% select("ANID", internal@x, internal@y))
+	# 	# print("")
+	# 	# print(current_selection %>% select("ANID", internal@x, internal@y))
+	# 	# print(previous_indicies)
 
-		index = grab_plot_point(internal@external, x, y)
-		selection = internal@external[index,]
-		# internal <<- adjust_selection(internal, selection)
-		# print(selection)
+	# 	# new_selection = previous_selection@selection[-index,]
 
-		internal_index = getSelectionIndex(internal, selection)
-		if (is.na(internal_index)) { ### Point hasn't been selected yet, so add it
-			print(glue("\tAdding new point to selection"))
-			internal <<- addSelection(internal, selection)
-			### Jump to the new selection using JavaScript in 'interactive.js'
-			proxy %>% DT::selectRows(which(internal@external$ID %in% internal@selection$ID))
-			if (index > 3) {
-				shinyjs::js$scroll(index-3)
-			} else {
-				shinyjs::js$scroll(index)
-			}
-		} else { ### Point is already present, so remove it
-			print(glue("\tRemoving point from selection"))
-			internal <<- removeSelection(internal, selection)
-		}
+	# 	# selected_data = data %>% filter(row_number() %in% selection)
+	# 	# internal <<- addSelection(internal, selected_data)
+	# })
+
+	# observeEvent(input$table_selection, {
+	# 	row = input$table_selection
+	# 	print(glue("\n[observeEvent] table_rows_selected (running shinyjs.selected)"))
+	# 	# print(glue("\t<{typeof(row)}> {row}"))
+	# 	selected = internal@external %>% filter(id == row[1])
+	# 	internal <<- addSelection(internal, selected)
+	# })
+
+	observeEvent(input$clear_selected, {
+		print(glue("\n[observeEvent] clear_selected"))
+		internal <<- clearSelection(internal)
+		proxy %>% DT::selectRows(which(internal@external["id"] %in% internal@selection["id"]))
 	})
 
 	# adjust_selection(data, selection) {
@@ -469,16 +481,7 @@ server = function(input, output, session) {
 	# 	}
 	# 	return(data)
 	# }
-
-	grab_plot_point = function(data, x, y) {
-		# print(paste("Looking for", selected_x(), "=", x, "and", selected_y(), "=", y))
-		index = which((data[selected_x()] == x) & (data[selected_y()] == y))
-		# print(index)
-		return(index)
-	}
-
-
-
+############################################################
 
 
 	toggle_source_points = observeEvent(input$show_source_points, {
@@ -496,56 +499,11 @@ server = function(input, output, session) {
 		}
 	})
 
-
-	### https://rstudio.github.io/DT/shiny.html#manipulate-an-existing-datatables-instance
-	proxy = DT::dataTableProxy('table')
-
 	grab_index = function(x) {
 		index = which((internal@df[selected_x()] == x[selected_x()]) & (internal@df[selected_y()] == x[selected_y()]))
 		# print(index)
 		return(index)
 	}
-
-	# observeEvent(input$table_rows_selected, {
-	# 	### This makes the table reactive to points being selected
-	# 	previous_selection = internal@selection
-	# 	current_indicies = input$table_rows_selected
-	# 	current_selection = internal@df %>% filter(row_number() %in% current_indicies)
-	# 	# data = internal@df %>% ungroup()
-	# 	# previous_indicies = getSelectionIndex(internal, input$table_rows_selected)
-	# 	print(previous_selection %>% select("ANID", internal@x, internal@y))
-	# 	print("")
-	# 	print(current_selection %>% select("ANID", internal@x, internal@y))
-	# 	# print(previous_indicies)
-
-	# 	# new_selection = previous_selection@selection[-index,]
-
-	# 	# selected_data = data %>% filter(row_number() %in% selection)
-	# 	# internal <<- addSelection(internal, selected_data)
-	# })
-
-
-
-
-
-	# observeEvent(input$upload_files, {
-	# # check_files = reactive({
-	# 	print(paste("[observeEvent] check_input() - Parsing uploaded files"))
-	# 	nfiles = length(input$upload_files$name)
-	# 	temp = data.frame(name=character(), path=character())
-	# 	for (i in 1:nfiles) {
-	# 		newfile = data.frame(
-	# 			name=input$upload_files$name[i],
-	# 			path=input$upload_files$datapath[i],
-	# 			type="artifact",
-	# 			show=FALSE)
-	# 		temp = rbind(temp, newfile)
-	# 	}
-	# 	internal <<- addFiles(internal, temp)
-	# 	print(internal@files$name)
-	
-
-	# })
 
 	### Handle adding the new files to the internal data
 	observeEvent(input$upload_files, {
@@ -580,49 +538,6 @@ server = function(input, output, session) {
 			shinyBS::toggleModal(session, modalId='upload_modal', toggle="close")
 		}
 	})
-
-	# ### Open the modal dialog box to manipulate the new data
-	# observeEvent(c(
-	# 	input$view_uploaded_files,
-	# 	input$upload_files
-	# ), {
-	# 	if ((input$view_uploaded_files) | !is.null(input$upload_files)) { ### This if-statement ensures the Modal is only shown when uploaded files are available
-	# 		if (nrow(internal@datafiles) > 0) {
-	# 			available_files = internal@datafiles %>% select(name) %>% unlist(use.names=FALSE)
-	# 		} else {
-	# 			available_files = list()
-	# 		}
-	# 		# print(available_files)
-	# 		showModal(
-	# 			modalDialog(
-	# 				title="View uploaded files",
-	# 				selectInput(inputId='test',
-	# 					label="Select the file",
-	# 					choices=available_files
-	# 				),
-	# 				print(input$test),
-	# 				easyClose=TRUE
-	# 			)
-	# 		)
-	# 	} else {
-	# 		removeModal()
-	# 	}
-	# })
-
-	# ### Open the modal dialog box to manipulate the new data
-	# observeEvent(input$upload_files, {
-	# 	# print("")
-	# 	# print("Uploaded Files")
-	# 	# print(input$upload_files)
-	# 	if (nrow(internal@datafiles) > 0) {
-	# 		available_files = internal@datafiles %>% select(name) %>% unlist(use.names=FALSE)
-	# 	} else {
-	# 		available_files = list()
-	# 	}
-
-	# 	print(available_files)
-	# 	shinyBS::toggleModal(session, 'test', toggle="open")
-	# })	
 
 	observeEvent(input$upload_name, {
 		# filepath = internal@datafiles %>% filter(name == input$upload_name) %>% select(path) %>% unlist
@@ -716,8 +631,6 @@ server = function(input, output, session) {
 		})
 	})
 
-	# upload_preview_proxy = DT::dataTableProxy('upload_preview')
-
 	observeEvent(input$upload_type, {
 		if (!is.null(input$upload_name)) {
 			internal <<- setDatafileValue(internal, input$upload_name, "type", input$upload_type)
@@ -780,42 +693,6 @@ server = function(input, output, session) {
 		}
 	})
 
-
-	# observeEvent(c(
-	# 	input$upload_sample_type,
-	# 	input$upload_sample_id_column,
-	# 	input$upload_group_column,
-	# 	input$upload_element_column,
-	# 	input$upload_note_column
-	# ), {
-	# 	# print("**Updating column background color")
-	# 	# # print(glue(as.numeric(input$upload_note_column), " ", is.numeric(as.numeric(input$upload_note_column))))
-	# 	# # print(c(as.numeric(input$upload_note_column)))
-	# 	# if (!is.na(as.numeric(input$upload_note_column))) {
-	# 	# 	# print(c(as.numeric(input$upload_note_column)))
-	# 	# 	print("***Adding the new background")
-	# 	# 	reloadData(upload_preview_proxy) %>% DT::formatStyle(
-	# 	# 						c(1),
-	# 	# 						c("#4D4D4D")
-	# 	# 						# target='column',
-	# 	# 						# backgroundColor="#4D4D4D"
-	# 	# 					)
-	# 	# }
-
-
-
-
-	# })
-
-	# output$upload_sample_id_column_interface <- renderUI({
-	# 	print(list(1:10))
-	# 	selectInput(inputId='upload_sample_id_column',
-	# 		label='Sample ID Column',
-	# 		choices=list(1:10),
-	# 		selected=1
-	# 	)
-	# })
-
 	observeEvent(c(
 		input$upload_name,
 		input$upload_type,
@@ -844,7 +721,7 @@ server = function(input, output, session) {
 	### https://shiny.rstudio.com/articles/datatables.html
 	### https://rstudio.github.io/DT/shiny.html
 	## DT::renderDataTable() takes an expression that returns a rectangular data object with column names, such as a data frame or a matrix.
-	updatePlot = observeEvent(c(
+	observeEvent(c(
 		selected_country(),
 		selected_x(),
 		selected_y(),
@@ -931,9 +808,11 @@ server = function(input, output, session) {
 		})
 	})
 
+	### https://rstudio.github.io/DT/shiny.html#manipulate-an-existing-datatables-instance
+	proxy = DT::dataTableProxy('table')
 
 
-	updatePlot = observeEvent(c(
+	observeEvent(c(
 			selected_country(),
 			selected_sources(),
 			selected_x(),
