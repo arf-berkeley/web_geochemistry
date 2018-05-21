@@ -388,7 +388,7 @@ NULL
 	observeEvent(input$clear_selected, {
 		print(glue("\n[observeEvent] clear_selected"))
 		internal <<- clearSelection(internal)
-		proxy %>% DT::selectRows(which(internal@external["id"] %in% internal@selection["id"]))
+		proxy %>% DT::selectRows(c())
 	})
 ############################################################
 
@@ -475,8 +475,8 @@ NULL
 			selectInput(inputId='upload_sample_id_column',
 				label='Sample ID Column',
 				choices=c("None", colnames(tab)),
-				# selected=unlist(internal@datafiles[[input$upload_name]]["id"], use.names=FALSE),
-				selected=c(1),
+				selected=unlist(internal@datafiles[[input$upload_name]]["id"], use.names=FALSE),
+				# selected=c(1),
 				multiple=FALSE
 			)
 		})
@@ -485,8 +485,8 @@ NULL
 			selectInput(inputId='upload_group_column',
 				label='Source Column',
 				choices=c("None", colnames(tab)),
-				# selected=unlist(internal@datafiles[[input$upload_name]]["group"], use.names=FALSE),
-				selected=c(2),
+				selected=unlist(internal@datafiles[[input$upload_name]]["group"], use.names=FALSE),
+				# selected=c(2),
 				multiple=FALSE
 			)
 		})
@@ -495,8 +495,8 @@ NULL
 			selectInput(inputId='upload_element_column',
 				label='Element Columns',
 				choices=colnames(tab),
-				# selected=c(unlist(internal@datafiles[[input$upload_name]]["element"], use.names=FALSE)),
-				selected=c(3:12),
+				selected=c(unlist(internal@datafiles[[input$upload_name]]["element"], use.names=FALSE)),
+				# selected=c(3:12),
 				multiple=TRUE
 			)
 		})
