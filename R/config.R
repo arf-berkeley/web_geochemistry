@@ -3,7 +3,7 @@ print("Running 'config.R'.")
 # library("readxl")
 library("dplyr")
 
-xrf_elements = list("Iron"="Fe", "Manganese"="Mn", "Neodynium"="Nd", "Rubidium"="Rb",
+xrf_elements = list("Iron"="Fe", "Manganese"="Mn", "Niobium"="Nb", "Rubidium"="Rb",
 	"Strontium"="Sr", "Yttrium"="Y", "Zirconium"="Zr")
 
 naa_elements = list("Barium"="Ba", "Lanthanum"="La", "Lutetium"="Lu",
@@ -26,6 +26,7 @@ my_sidepanel_style="margin:0px 0px 5px;border-radius:5px;padding:2px 10px 4px;ba
 my_sidepanel_style=glue::glue(my_sidepanel_style)
 
 ### Source the data when the session begins (occurs for both ui.R and server.R)
+# try to grab this from GoogleSheets
 data = read.csv("data/MURR-NAA.csv")
 
 vectorof_count_labels = function(df) {
