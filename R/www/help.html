@@ -4,13 +4,19 @@
 </header>
 
 <body>
-    Hello world, this is where we will put a help page to detail how to use the Geochemical Visualizaiton application!
-    <div style="margin-top:12px;">
-    	I imagine an interface similar to this: <a href="https://docs.python.org/3.6/tutorial/index.html">https://docs.python.org/3.6/tutorial/index.html</a>
-    </div>
-    <div>
-    	Where we can easily walk the user through the interface and workflow.
-    </div>
+<h1>Welcome to the ARF's Obsidian Geochemistry Visualization App!<strong><br /></strong></h1>
+    <p>This R-Shiny App plots artifact geochemistry values on a biplot against ellipses representing geochemical values from well-characterized obsidian sources.</p>
+    <p>Source geochemical data is derived from Neutron Activation Analysis studies conducted by the Missouri University Research Reactor and provided by Mike Glascock for hosting on <a href="https://opencontext.org/projects/8e7fee33-8ec7-4707-910b-6ace9d70d032">this OpenContext Project</a>. The geographical span of the source data is currently limited to the continent of South America.</p>
+    <h2><strong>Intended workflow</strong></h2>
+        <p>Select obsidian sources in your study region by Country and Source Names.</p>
+        <p>Upload artifact data CSV (Comma Separated Values table) under "Data Management" from a calibrated X-Ray Fluorescence instrument</p>
+        <p>Choose source chemical elements that provide good discrimination between sources in your region. Because these are based on NAA the most promising elements are Rb, Th, and sometimes Sr (when &gt; 50ppm) and Zr when U is low.</p>
+        <p>Assign samples to sources by typing source name into the Notes field. Click Download to save the modified table to a local CSV file. [<strong>Note:</strong> <em><strong>the Download feature is not currently working</strong></em>]</p>
+    <h2>Caveats</h2>
+        <p>This workflow involves overlaying XRF artifact data on NAA derived chemical values.</p>
+        <p>Please send comments/questions to N. Tripcevich (<a href="mailto:tripcevich@berkeley.edu">tripcevich@berkeley.edu</a>)</p>
+    <h2>Acknowledgements</h2>
+        <p>This project began as a Mellon Digital Humanities grant to L. Trever and N. Tripcevich</p>
 </body>
 
 </html>
