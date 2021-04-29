@@ -8,15 +8,20 @@
     <p>This R-Shiny App plots artifact geochemistry values on a biplot against ellipses representing geochemical values from well-characterized obsidian sources.</p>
     <p>Source geochemical data is derived from Neutron Activation Analysis studies conducted by the Missouri University Research Reactor and provided by Mike Glascock for hosting on <a href="https://opencontext.org/projects/8e7fee33-8ec7-4707-910b-6ace9d70d032">this OpenContext Project</a>. The geographical span of the source data is currently limited to the continent of South America.</p>
     <h2><strong>Intended workflow</strong></h2>
-        <p>Select obsidian sources in your study region by Country and Source Names.</p>
-        <p>Upload artifact data CSV (Comma Separated Values table) under "Data Management" from a calibrated X-Ray Fluorescence instrument</p>
-        <p>Choose source chemical elements that provide good discrimination between sources in your region. Because these are based on NAA the most promising elements are Rb, Th, and sometimes Sr (when &gt; 50ppm) and Zr when U is low.</p>
-        <p>Assign samples to sources by typing source name into the Notes field. Click Download to save the modified table to a local CSV file. [<strong>Note:</strong> <em><strong>the Download feature is not currently working</strong></em>]</p>
+        <ol>
+        <li>Select obsidian sources in your study region by Country and Source Names.</li>
+        <li>Upload artifact data CSV (Comma Separated Values table) under "Data Management". <a href="https://raw.githubusercontent.com/arf-berkeley/web_geochemistry/master/peru-south_xrf-siteid.csv">See this file for an example of the expect CSV format</a> derived from a calibrated X-Ray Fluorescence instrument.</li>
+        <li>Choose source chemical elements that provide good discrimination between sources in your region. Because these are based on NAA the most promising elements are Rb, Th, and sometimes Sr (when &gt; 50ppm) and Zr when U is low.</li>
+        <li>Assign samples to sources by typing source name into the Notes field. Click Download to save the modified table to a local CSV file. [<strong>Note:</strong> <em><strong>the Download feature is not currently working. Workaround: do this step separately</strong></em>]</li>
+        </ol>
+        <p>For more details on obsidian source chemistry or to download the NAA data directly <a href="https://opencontext.org/subjects-search/?proj=142-andean-geochemistry-visualization-project&amp;prop=oc-gen-cat-object#3/-25.64/-78.05/7/any/Google-Satellite">browse the project records on the OpenContext repository.</a></p>
     <h2>Caveats</h2>
-        <p>This workflow involves overlaying XRF artifact data on NAA derived chemical values.</p>
+        <p>This workflow involves overlaying XRF artifact data on NAA derived chemical values and there are numerous complications in this comparison with which you should be familiar.</p>
+        <p>View the <a href="https://github.com/arf-berkeley/web_geochemistry">repo for this project on Github</a>.</p>
         <p>Please send comments/questions to N. Tripcevich (<a href="mailto:tripcevich@berkeley.edu">tripcevich@berkeley.edu</a>)</p>
     <h2>Acknowledgements</h2>
         <p>This project began as a Mellon Digital Humanities grant to L. Trever and N. Tripcevich</p>
-</body>
-
+    <h2>References</h2>
+        <p>Shackley 1998</p>
+        <p>Glascock 2005, 2020</p></body>
 </html>
